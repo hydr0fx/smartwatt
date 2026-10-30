@@ -1,0 +1,332 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1001 /* SmartWattApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2001 /* SmartWattApp.swift */; };
+		1002 /* DeviceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2002 /* DeviceModel.swift */; };
+		1003 /* DeviceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2003 /* DeviceStore.swift */; };
+		1004 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2004 /* ContentView.swift */; };
+		1005 /* DeviceCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2005 /* DeviceCardView.swift */; };
+		1006 /* DeviceDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2006 /* DeviceDetailSheet.swift */; };
+		1007 /* CostCalculatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2007 /* CostCalculatorView.swift */; };
+		1008 /* TuyaScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2008 /* TuyaScannerView.swift */; };
+		1009 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2009 /* SettingsView.swift */; };
+		1010 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2010 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		2000 /* SmartWatt.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SmartWatt.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2001 /* SmartWattApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartWattApp.swift; sourceTree = "<group>"; };
+		2002 /* DeviceModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceModel.swift; sourceTree = "<group>"; };
+		2003 /* DeviceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceStore.swift; sourceTree = "<group>"; };
+		2004 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		2005 /* DeviceCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceCardView.swift; sourceTree = "<group>"; };
+		2006 /* DeviceDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceDetailSheet.swift; sourceTree = "<group>"; };
+		2007 /* CostCalculatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CostCalculatorView.swift; sourceTree = "<group>"; };
+		2008 /* TuyaScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TuyaScannerView.swift; sourceTree = "<group>"; };
+		2009 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		2010 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2011 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		3000 = {
+			isa = PBXGroup;
+			children = (
+				3001 /* SmartWatt */,
+				3002 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		3001 /* SmartWatt */ = {
+			isa = PBXGroup;
+			children = (
+				2001 /* SmartWattApp.swift */,
+				3003 /* Models */,
+				3004 /* Services */,
+				3005 /* Views */,
+				2010 /* Assets.xcassets */,
+				2011 /* Info.plist */,
+			);
+			path = SmartWatt;
+			sourceTree = "<group>";
+		};
+		3002 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				2000 /* SmartWatt.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		3003 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				2002 /* DeviceModel.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		3004 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				2003 /* DeviceStore.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		3005 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				2004 /* ContentView.swift */,
+				2005 /* DeviceCardView.swift */,
+				2006 /* DeviceDetailSheet.swift */,
+				2007 /* CostCalculatorView.swift */,
+				2008 /* TuyaScannerView.swift */,
+				2009 /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4000 /* SmartWatt */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5000 /* Build configuration list for PBXNativeTarget "SmartWatt" */;
+			buildPhases = (
+				6001 /* Sources */,
+				6002 /* Frameworks */,
+				6003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SmartWatt;
+			productName = SmartWatt;
+			productReference = 2000 /* SmartWatt.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		5001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					4000 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = 5002 /* Build configuration list for PBXProject "SmartWatt" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = de;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				de,
+				Base,
+			);
+			mainGroup = 3000;
+			productRefGroup = 3002 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4000 /* SmartWatt */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		6003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1010 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		6001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1001 /* SmartWattApp.swift in Sources */,
+				1002 /* DeviceModel.swift in Sources */,
+				1003 /* DeviceStore.swift in Sources */,
+				1004 /* ContentView.swift in Sources */,
+				1005 /* DeviceCardView.swift in Sources */,
+				1006 /* DeviceDetailSheet.swift in Sources */,
+				1007 /* CostCalculatorView.swift in Sources */,
+				1008 /* TuyaScannerView.swift in Sources */,
+				1009 /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		6002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		7001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		7002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		7003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SmartWatt/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SmartWatt;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hydr0fx.smartwatt;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		7004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SmartWatt/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SmartWatt;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hydr0fx.smartwatt;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5000 /* Build configuration list for PBXNativeTarget "SmartWatt" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7003 /* Debug */,
+				7004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5002 /* Build configuration list for PBXProject "SmartWatt" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7001 /* Debug */,
+				7002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 5001 /* Project object */;
+}

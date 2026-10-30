@@ -574,3 +574,10 @@ def serve_manifest():
 @app.get("/sw.js")
 def serve_sw():
     return FileResponse(STATIC_DIR / "sw.js")
+
+@app.get("/{filename}.png")
+def serve_png(filename: str):
+    file_path = STATIC_DIR / f"{filename}.png"
+    if file_path.exists():
+        return FileResponse(file_path, media_type="image/png")
+    raise HTTPException(status_code=404, detail="Not Found")

@@ -5,12 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>SmartWatt - Smarter Energie- & Stromkosten-Hub</title>
   
-  <!-- PWA Meta Tags -->
+  <!-- PWA & iOS Native Web App Meta Tags -->
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#000000">
   <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SmartWatt">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 
   <!-- Tailwind CSS, Chart.js & Lucide Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -66,6 +70,12 @@
 
       <!-- Actions -->
       <div class="flex items-center gap-2 shrink-0">
+        <!-- iOS App Button -->
+        <button onclick="openIOSInstallModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-xs font-semibold text-white transition cursor-pointer">
+          <i data-lucide="smartphone" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>iOS App</span>
+        </button>
+
         <!-- Strompreis Pill -->
         <button onclick="toggleQuickPriceBar()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-xs font-semibold text-neutral-200 transition cursor-pointer">
           <span class="text-neutral-400 hidden sm:inline">Tarif:</span>
@@ -759,6 +769,83 @@
         </button>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ==================== IOS INSTALL / NATIVE APP MODAL ==================== -->
+  <div id="ios-install-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="apple-glass rounded-3xl p-6 sm:p-7 max-w-lg w-full border border-white/15 shadow-2xl space-y-5 animate-in fade-in zoom-in-95">
+      <!-- Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-white/10">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 p-0.5 shadow-lg shadow-emerald-500/20 flex items-center justify-center">
+            <img src="./apple-touch-icon.png" alt="App Icon" class="w-full h-full rounded-2xl">
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">SmartWatt als echte iOS-App</h3>
+            <p class="text-xs text-neutral-400">Installation auf iPhone & iPad</p>
+          </div>
+        </div>
+        <button onclick="closeIOSInstallModal()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-neutral-300 hover:text-white transition cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Option 1: Sofort als Vollbild-App auf dem Homescreen installieren -->
+      <div class="p-4 rounded-2xl bg-white/[0.04] border border-white/10 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+            <i data-lucide="zap" class="w-4 h-4"></i>
+            <span>Option 1: Sofort auf Homescreen (0 Sekunden)</span>
+          </span>
+          <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold">Empfohlen</span>
+        </div>
+        <p class="text-xs text-neutral-300">
+          Die App ist zu 100% als native iOS Web-App optimiert. Sie läuft nach dem Hinzufügen im <strong>Vollbildmodus ohne Safari-Suchleiste</strong> mit haptischem Feedback:
+        </p>
+        <div class="space-y-2 text-xs">
+          <div class="flex items-center gap-3 p-2 rounded-xl bg-black/40 border border-white/5">
+            <div class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center shrink-0">1</div>
+            <span>Öffne <strong>https://hydr0fx.github.io/smartwatt/</strong> in <strong>Safari</strong> auf deinem iPhone.</span>
+          </div>
+          <div class="flex items-center gap-3 p-2 rounded-xl bg-black/40 border border-white/5">
+            <div class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center shrink-0">2</div>
+            <span>Tippe unten auf das <strong>Teilen-Symbol</strong> <i data-lucide="share" class="w-3.5 h-3.5 inline text-blue-400"></i> (Viereck mit Pfeil nach oben).</span>
+          </div>
+          <div class="flex items-center gap-3 p-2 rounded-xl bg-black/40 border border-white/5">
+            <div class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center shrink-0">3</div>
+            <span>Wähle <strong>"Zum Home-Bildschirm"</strong> <i data-lucide="plus-square" class="w-3.5 h-3.5 inline text-emerald-400"></i> und tippe oben rechts auf <strong>"Hinzufügen"</strong>.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Option 2: Nativer Swift / Xcode Quellcode & GitHub CI Build -->
+      <div class="p-4 rounded-2xl bg-white/[0.04] border border-white/10 space-y-3">
+        <span class="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+          <i data-lucide="code" class="w-4 h-4"></i>
+          <span>Option 2: Nativer SwiftUI Quellcode & Xcode</span>
+        </span>
+        <p class="text-xs text-neutral-300">
+          Im Repository findest du das vollständige native <strong>SwiftUI Xcode-Projekt</strong> (<code>ios/SmartWatt.xcodeproj</code>) inklusive GitHub Actions Cloud-Build, der automatisch eine iOS-App kompiliert.
+        </p>
+        <div class="flex gap-2 pt-1">
+          <a href="https://github.com/hydr0fx/smartwatt/tree/main/ios" target="_blank" class="flex-1 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-center text-xs font-semibold text-white transition flex items-center justify-center gap-1.5">
+            <i data-lucide="github" class="w-3.5 h-3.5"></i>
+            <span>Xcode-Projekt ansehen</span>
+          </a>
+          <a href="https://github.com/hydr0fx/smartwatt/actions" target="_blank" class="flex-1 py-2 rounded-xl bg-blue-600/30 hover:bg-blue-600/40 border border-blue-500/30 text-center text-xs font-semibold text-blue-300 transition flex items-center justify-center gap-1.5">
+            <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+            <span>GitHub iOS-Builds</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="pt-2 flex justify-end">
+        <button onclick="closeIOSInstallModal()" class="px-5 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition cursor-pointer">
+          Verstanden
+        </button>
+      </div>
     </div>
   </div>
 

@@ -849,6 +849,17 @@ async function applyTimer(minutes) {
   }
 }
 
+function openIOSInstallModal() {
+  const modal = document.getElementById('ios-install-modal');
+  if (modal) modal.classList.remove('hidden');
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeIOSInstallModal() {
+  const modal = document.getElementById('ios-install-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
 // Settings & Tuya Modal
 function openSettingsModal(targetSection = '') {
   document.getElementById('settings-modal').classList.remove('hidden');
