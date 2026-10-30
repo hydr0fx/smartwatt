@@ -976,6 +976,229 @@ async function saveSettings() {
   await updateAll(true);
 }
 
+// SMART LIFE QR CODE IMPORT FLOW (Home Assistant Official Standard)
+let qrPollInterval = null;
+
+async function requestTuyaQRCode() {
+  const userCodeInput = document.getElementById('qr-user-code-input');
+  const userCode = userCodeInput ? userCodeInput.value.trim() : '';
+  const resultBox = document.getElementById('qr-result-box');
+  const displayBox = document.getElementById('qr-display-box');
+  const qrImage = document.getElementById('qr-code-image');
+  const qrStatusText = document.getElementById('qr-status-text');
+
+  if (!userCode) {
+    if (resultBox) {
+      resultBox.classList.remove('hidden');
+      resultBox.className = 'text-xs p-3 rounded-xl border bg-rose-950/40 text-rose-300 border-rose-800 font-mono';
+      resultBox.textContent = '✕ Bitte gib deinen Benutzer-Code ein (in Smart Life: Profil ➔ ⚙️ Einstellungen ➔ Konto & Sicherheit ➔ Benutzer-Code).';
+    }
+    return;
+  }
+
+  if (resultBox) resultBox.classList.add('hidden');
+  if (qrPollInterval) clearInterval(qrPollInterval);
+
+  if (isStandaloneMode) {
+    const mockToken = 'AY' + Date.now() + 'x' + userCode;
+    const qrData = `tuyaSmart--qrLogin?token=${mockToken}`;
+    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrData)}&bgcolor=ffffff&color=060911`;
+
+    if (displayBox && qrImage) {
+      qrImage.src = qrImageUrl;
+      displayBox.classList.remove('hidden');
+      if (qrStatusText) {
+        qrStatusText.innerHTML = `
+          <div class="space-y-1">
+            <div class="text-emerald-300 font-bold flex items-center justify-center gap-2">
+              <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+              <span>QR-Code erzeugt!</span>
+            </div>
+            <p class="text-[11px] text-slate-300">
+              Scanne den Code mit Smart Life. Für den automatischen Live-Stream starte <strong>start.bat</strong> auf deinem PC, oder nutze unten die <strong>1-Klick Schnell-Vorlagen</strong>.
+            </p>
+          </div>
+        `;
+      }
+    }
+    return;
+  }
+
+  // Live Backend flow: call /api/tuya/qr-request
+  try {
+    const res = await fetch('/api/tuya/qr-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_code: userCode })
+    });
+    const data = await res.json();
+
+    if (!res.ok || data.status !== 'success') {
+      if (resultBox) {
+        resultBox.classList.remove('hidden');
+        resultBox.className = 'text-xs p-3 rounded-xl border bg-rose-950/40 text-rose-300 border-rose-800 font-mono';
+        resultBox.textContent = `✕ ${data.message || 'Fehler beim Erzeugen des QR-Codes. Bitte Benutzer-Code prüfen.'}`;
+      }
+      return;
+    }
+
+    if (displayBox && qrImage) {
+      qrImage.src = data.qr_image_url;
+      displayBox.classList.remove('hidden');
+      if (qrStatusText) {
+        qrStatusText.innerHTML = `
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+          <span>Warten auf Scan in deiner Smart Life App...</span>
+        `;
+      }
+    }
+
+    const token = data.token;
+    qrPollInterval = setInterval(async () => {
+      try {
+        const pollRes = await fetch('/api/tuya/qr-poll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, user_code: userCode })
+        });
+        const pollData = await pollRes.json();
+
+        if (pollData.status === 'success') {
+          clearInterval(qrPollInterval);
+          if (qrStatusText) {
+            qrStatusText.innerHTML = `
+              <span class="text-emerald-400 font-bold">✓ Scan erfolgreich bestätigt! ${pollData.imported} Steckdose(n) importiert!</span>
+            `;
+          }
+          setTimeout(async () => {
+            closeSettingsModal();
+            await updateAll(true);
+          }, 1500);
+        }
+      } catch (err) {
+        console.error('QR Poll error:', err);
+      }
+    }, 2500);
+
+  } catch (err) {
+    if (resultBox) {
+      resultBox.classList.remove('hidden');
+      resultBox.className = 'text-xs p-3 rounded-xl border bg-rose-950/40 text-rose-300 border-rose-800 font-mono';
+      resultBox.textContent = `✕ Verbindungsfehler: ${err.message}`;
+    }
+  }
+}
+
+// 1-KLICK SCHNELL-VORLAGEN (PRESETS)
+function addPresetDevice(name, category, power, icon) {
+  const roomNames = {
+    'entertainment': 'Gaming & TV',
+    'kitchen': 'Küche',
+    'utility': 'Bad & Technik',
+    'general': 'Wohnzimmer'
+  };
+
+  const newDev = {
+    id: `preset-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+    name: name,
+    icon: icon || 'plug',
+    category: category,
+    room: category,
+    room_name: roomNames[category] || 'Smart Life',
+    is_on: 1,
+    power_w: power,
+    voltage_v: 230.0,
+    current_ma: (power / 230.0) * 1000.0,
+    energy_today_kwh: +(power * 0.003).toFixed(2),
+    energy_total_kwh: +(power * 0.05).toFixed(2),
+    peak_power_w: Math.round(power * 1.15),
+    is_simulated: 1,
+    timer_seconds_left: 0,
+    _saved_power_w: power
+  };
+
+  currentDevices.push(newDev);
+  if (isStandaloneMode) {
+    localStorage.setItem('smartwatt_devices_v4', JSON.stringify(currentDevices));
+  } else {
+    fetch('/api/devices/import-json', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ devices: [newDev] })
+    }).catch(e => {});
+  }
+
+  updateAll(true);
+  alert(`✓ "${name}" (${power}W) wurde erfolgreich hinzugefügt!`);
+}
+
+// JSON EXPORT & IMPORT
+function exportDevicesJson() {
+  const data = {
+    app: "SmartWatt",
+    version: "2.0",
+    export_date: new Date().toISOString(),
+    settings: currentSettings,
+    devices: currentDevices
+  };
+
+  const jsonStr = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `smartwatt-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function triggerImportJson() {
+  const fileInput = document.getElementById('json-import-file');
+  if (fileInput) fileInput.click();
+}
+
+function handleFileImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      const devices = Array.isArray(data) ? data : (data.devices || []);
+      if (!Array.isArray(devices) || devices.length === 0) {
+        alert("✕ Keine gültigen Geräte in der JSON-Datei gefunden.");
+        return;
+      }
+
+      currentDevices = devices;
+      if (data.settings) {
+        Object.assign(currentSettings, data.settings);
+        localStorage.setItem('smartwatt_settings_v4', JSON.stringify(currentSettings));
+      }
+      localStorage.setItem('smartwatt_devices_v4', JSON.stringify(currentDevices));
+
+      if (!isStandaloneMode) {
+        fetch('/api/devices/import-json', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ devices: currentDevices })
+        }).catch(e => {});
+      }
+
+      closeSettingsModal();
+      loadSettings();
+      updateAll(true);
+      alert(`✓ ${devices.length} Steckdose(n) erfolgreich importiert!`);
+    } catch (err) {
+      alert(`✕ Fehler beim Lesen der JSON-Datei: ${err.message}`);
+    }
+  };
+  reader.readAsText(file);
+}
+
 // TEST TUYA CLOUD CONNECTION
 async function testTuyaConnection() {
   const tuyaId = document.getElementById('setting-tuya-id').value.trim();

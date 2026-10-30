@@ -575,83 +575,126 @@
       <!-- Settings Content -->
       <div class="space-y-4 text-xs sm:text-sm">
         
-        <!-- SECTION 1: Tuya Cloud API Connection -->
-        <div class="p-3.5 sm:p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
-          <div class="flex justify-between items-center">
+        <!-- SECTION 1: SUPER-EASY QR-CODE IMPORT (HOME ASSISTANT STANDARD) -->
+        <div class="p-3.5 sm:p-5 rounded-2xl bg-gradient-to-br from-emerald-950/40 via-teal-950/20 to-slate-900 border border-emerald-500/40 shadow-xl space-y-3.5">
+          <div class="flex items-center justify-between">
             <h4 class="font-bold text-emerald-400 flex items-center gap-2 text-xs uppercase tracking-wider">
-              <i data-lucide="cloud" class="w-4 h-4"></i>
-              <span>Tuya / Smart Life Cloud API</span>
+              <i data-lucide="qr-code" class="w-4 h-4"></i>
+              <span>Smart Life Direkt-Import (Ohne Developer-Account!)</span>
             </h4>
-            
-            <button onclick="toggleSimulationMode()" id="btn-toggle-sim" class="text-xs px-3 py-1 rounded-full liquid-glass hover:bg-white/15 text-slate-300 transition cursor-pointer">
-              Modus wechseln
-            </button>
+            <span class="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold">1-Klick</span>
           </div>
 
           <p class="text-xs text-slate-300 leading-relaxed">
-            Deine Steckdosen laufen in <strong>Smart Life</strong> über das weltweite <strong>Tuya-Ökosystem</strong>. Über die offizielle kostenlose Tuya Developer API greift SmartWatt alle Live-Werte (Watt, Volt, Ampere, On/Off) ab – während du die Steckdosen <strong>weiterhin ganz normal in Smart Life</strong> bedienst!
+            <strong>Kein lästiges Tuya-Konto oder Cloud-Projekt nötig!</strong> Wie bei Home Assistant scannst du einfach einen QR-Code direkt mit deiner <strong>Smart Life App</strong> auf dem Handy – alle Steckdosen werden sofort importiert:
           </p>
 
-          <div class="space-y-2.5">
-            <div>
-              <label class="block text-xs text-slate-300 mb-1">Tuya Access ID (Client ID):</label>
-              <input id="setting-tuya-id" type="text" placeholder="z.B. 3v9x84m29xxxxxxxx"
-                class="w-full bg-white/[0.05] border border-white/15 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-400">
+          <!-- 3 Easy Steps Guide -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-slate-300">
+            <div class="p-2.5 rounded-xl bg-black/30 border border-white/5 space-y-1">
+              <div class="font-bold text-emerald-400">1. Benutzer-Code nachsehen</div>
+              <p class="text-slate-400">In Smart Life: <strong>Profil</strong> ➔ <strong>⚙️ Einstellungen</strong> ➔ <strong>Konto und Sicherheit</strong> ➔ ganz unten steht dein <strong>Benutzer-Code</strong>.</p>
             </div>
-
-            <div>
-              <label class="block text-xs text-slate-300 mb-1">Tuya Access Secret:</label>
-              <input id="setting-tuya-secret" type="password" placeholder="z.B. a82f7c0xxxxxxxxxxxxxxxxx"
-                class="w-full bg-white/[0.05] border border-white/15 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-400">
+            <div class="p-2.5 rounded-xl bg-black/30 border border-white/5 space-y-1">
+              <div class="font-bold text-emerald-400">2. Hier eintragen</div>
+              <p class="text-slate-400">Benutzer-Code unten eingeben und auf <strong>„QR-Code erzeugen“</strong> klicken.</p>
             </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div>
-                <label class="block text-xs text-slate-300 mb-1">Server Region:</label>
-                <select id="setting-tuya-endpoint" class="w-full bg-slate-900 border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-400">
-                  <option value="https://openapi.tuyaeu.com">Zentral-Europa (Deutschland)</option>
-                  <option value="https://openapi-weaz.tuyaeu.com">West-Europa</option>
-                  <option value="https://openapi.tuyaus.com">USA West</option>
-                </select>
-              </div>
-
-              <div>
-                <label class="block text-xs text-slate-300 mb-1">Smart Life User ID (UID, optional):</label>
-                <input id="setting-tuya-uid" type="text" placeholder="z.B. eu163xxxxxxxx"
-                  class="w-full bg-white/[0.05] border border-white/15 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-400">
-              </div>
+            <div class="p-2.5 rounded-xl bg-black/30 border border-white/5 space-y-1">
+              <div class="font-bold text-emerald-400">3. Mit Smart Life scannen</div>
+              <p class="text-slate-400">In Smart Life oben rechts auf das Scan-Symbol <strong>`[—]`</strong> tippen, Code scannen & auf <strong>Bestätigen</strong> tippen!</p>
             </div>
           </div>
 
-          <!-- Buttons -->
-          <div class="pt-2 flex flex-wrap gap-2 items-center">
-            <button onclick="testTuyaConnection()" id="btn-test-tuya" class="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-md cursor-pointer">
-              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
-              <span>Verbindung testen</span>
-            </button>
-            <button onclick="syncTuyaDevices()" id="btn-sync-tuya" class="px-4 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition flex items-center gap-1.5 shadow-md cursor-pointer">
-              <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i>
-              <span>Aus Smart Life importieren</span>
+          <!-- Input field & Action button -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+            <div class="relative flex-1">
+              <input id="qr-user-code-input" type="text" placeholder="Benutzer-Code (z.B. AYy789 oder h7x92b)"
+                class="w-full bg-white/[0.07] border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono uppercase font-bold focus:outline-none focus:border-emerald-400">
+            </div>
+            <button onclick="requestTuyaQRCode()" id="btn-request-qr" class="px-5 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/25 active:scale-95 cursor-pointer">
+              <i data-lucide="qr-code" class="w-4 h-4"></i>
+              <span>QR-Code erzeugen</span>
             </button>
           </div>
 
-          <div id="tuya-test-result" class="text-xs p-3 rounded-xl hidden font-mono"></div>
-
-          <!-- Quick 3-min Guide -->
-          <details class="text-xs text-slate-400 border border-white/10 p-2.5 rounded-xl bg-black/20">
-            <summary class="cursor-pointer font-semibold text-slate-300 hover:text-white">
-              📖 3-Minuten-Anleitung: Woher bekomme ich meine Tuya API-Schlüssel?
-            </summary>
-            <div class="mt-2 space-y-1.5 text-slate-300 pl-2">
-              <p>1. Gehe auf <a href="https://iot.tuya.com" target="_blank" class="text-emerald-400 underline font-semibold">iot.tuya.com</a> und erstelle einen kostenlosen Entwickler-Account.</p>
-              <p>2. Klicke links auf <strong>Cloud -> Development -> Create Cloud Project</strong> (Region: Central Europe).</p>
-              <p>3. Klicke im Projekt auf <strong>Devices -> Link Tuya App Account</strong> und scanne den QR-Code mit deiner <strong>Smart Life App</strong>.</p>
-              <p>4. Unter <strong>Project Overview</strong> findest du deine <strong>Access ID</strong> und dein <strong>Access Secret</strong>. Trage sie oben ein und klicke auf "Verbindung testen"!</p>
+          <!-- QR Code Display Box (Dynamically shown) -->
+          <div id="qr-display-box" class="hidden p-4 rounded-2xl bg-black/40 border border-emerald-500/30 flex flex-col items-center justify-center space-y-3 text-center">
+            <div class="p-3 bg-white rounded-2xl shadow-2xl">
+              <img id="qr-code-image" src="" alt="Smart Life QR Code" class="w-48 h-48 sm:w-56 sm:h-56">
             </div>
-          </details>
+            <div class="space-y-1 max-w-sm">
+              <div id="qr-status-text" class="text-xs text-emerald-300 font-bold flex items-center justify-center gap-2">
+                <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+                <span>Warten auf Scan in deiner Smart Life App...</span>
+              </div>
+              <p class="text-[11px] text-slate-400">Tippe in Smart Life oben rechts auf <strong>`[—]`</strong>, halte die Kamera auf den Code und bestätige.</p>
+            </div>
+          </div>
+
+          <div id="qr-result-box" class="text-xs p-3 rounded-xl hidden font-mono"></div>
         </div>
 
-        <!-- SECTION 2: Stromtarif & Schwellenwerte -->
+        <!-- SECTION 2: 1-KLICK SCHNELL-VORLAGEN (PRESETS) -->
+        <div class="p-3.5 sm:p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2.5">
+          <div class="flex justify-between items-center">
+            <h4 class="font-bold text-slate-200 flex items-center gap-2 text-xs uppercase tracking-wider">
+              <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+              <span>1-Klick Schnell-Vorlagen</span>
+            </h4>
+            <span class="text-[10px] text-slate-400">Sofort hinzufügen</span>
+          </div>
+          <p class="text-[11px] text-slate-400">Tippe auf ein Gerät, um es sofort mit realistischen Messwerten zu deiner App hinzuzufügen:</p>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+            <button onclick="addPresetDevice('Gaming-PC & Setup', 'entertainment', 400, 'monitor')" class="p-2 rounded-xl liquid-glass hover:bg-white/10 text-slate-200 flex items-center gap-2 transition cursor-pointer text-left">
+              <i data-lucide="monitor" class="w-4 h-4 text-indigo-400 shrink-0"></i>
+              <span class="truncate">Gaming-PC (400W)</span>
+            </button>
+            <button onclick="addPresetDevice('Kühlschrank', 'kitchen', 80, 'refrigerator')" class="p-2 rounded-xl liquid-glass hover:bg-white/10 text-slate-200 flex items-center gap-2 transition cursor-pointer text-left">
+              <i data-lucide="refrigerator" class="w-4 h-4 text-amber-400 shrink-0"></i>
+              <span class="truncate">Kühlschrank (80W)</span>
+            </button>
+            <button onclick="addPresetDevice('Waschmaschine', 'utility', 1850, 'washing-machine')" class="p-2 rounded-xl liquid-glass hover:bg-white/10 text-slate-200 flex items-center gap-2 transition cursor-pointer text-left">
+              <i data-lucide="washing-machine" class="w-4 h-4 text-cyan-400 shrink-0"></i>
+              <span class="truncate">Waschmaschine (1850W)</span>
+            </button>
+            <button onclick="addPresetDevice('Kaffeemaschine', 'kitchen', 1450, 'coffee')" class="p-2 rounded-xl liquid-glass hover:bg-white/10 text-slate-200 flex items-center gap-2 transition cursor-pointer text-left">
+              <i data-lucide="coffee" class="w-4 h-4 text-amber-400 shrink-0"></i>
+              <span class="truncate">Kaffeemaschine (1450W)</span>
+            </button>
+            <button onclick="addPresetDevice('Wohnzimmer TV', 'entertainment', 120, 'tv')" class="p-2 rounded-xl liquid-glass hover:bg-white/10 text-slate-200 flex items-center gap-2 transition cursor-pointer text-left">
+              <i data-lucide="tv" class="w-4 h-4 text-indigo-400 shrink-0"></i>
+              <span class="truncate">Fernseher & TV (120W)</span>
+            </button>
+            <button onclick="addPresetDevice('Heizlüfter / AC', 'utility', 2000, 'flame')" class="p-2 rounded-xl liquid-glass hover:bg-white/10 text-slate-200 flex items-center gap-2 transition cursor-pointer text-left">
+              <i data-lucide="flame" class="w-4 h-4 text-rose-400 shrink-0"></i>
+              <span class="truncate">Heizung / AC (2000W)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- SECTION 3: BACKUP / GERÄTE SYNCHRONISIEREN (JSON) -->
+        <div class="p-3.5 sm:p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2.5">
+          <div class="flex justify-between items-center">
+            <h4 class="font-bold text-slate-200 flex items-center gap-2 text-xs uppercase tracking-wider">
+              <i data-lucide="share-2" class="w-4 h-4 text-cyan-400"></i>
+              <span>Geräte-Synchronisation & Backup (JSON)</span>
+            </h4>
+          </div>
+          <p class="text-[11px] text-slate-400">Übertrage deine Steckdosen mit 1 Klick auf dein Smartphone oder erstelle ein Backup:</p>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="exportDevicesJson()" class="px-3.5 py-2 rounded-full liquid-glass hover:bg-white/10 text-slate-200 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>Steckdosen exportieren</span>
+            </button>
+            <button onclick="triggerImportJson()" class="px-3.5 py-2 rounded-full liquid-glass hover:bg-white/10 text-slate-200 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+              <span>Backup importieren</span>
+            </button>
+            <input type="file" id="json-import-file" accept=".json" class="hidden" onchange="handleFileImport(event)">
+          </div>
+        </div>
+
+        <!-- SECTION 4: Stromtarif & Schwellenwerte -->
         <div class="p-3.5 sm:p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
           <h4 class="font-bold text-emerald-400 flex items-center gap-2 text-xs uppercase tracking-wider">
             <i data-lucide="euro" class="w-4 h-4"></i>
@@ -673,7 +716,35 @@
           </div>
         </div>
 
-        <!-- SECTION 3: Reset / Standard -->
+        <!-- SECTION 5: EXPERTEN-OPTION (KLAPPBAR: TUYA DEVELOPER API) -->
+        <details class="text-xs text-slate-400 border border-white/10 p-3 rounded-2xl bg-black/20">
+          <summary class="cursor-pointer font-semibold text-slate-300 hover:text-white flex items-center justify-between">
+            <span>⚙️ Experten-Option: Manuelle Tuya Developer API (Access ID & Secret)</span>
+            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+          </summary>
+          <div class="mt-3 space-y-2.5 pt-2 border-t border-white/10">
+            <div>
+              <label class="block text-xs text-slate-300 mb-1">Tuya Access ID:</label>
+              <input id="setting-tuya-id" type="text" placeholder="z.B. 3v9x84m29xxxxxxxx"
+                class="w-full bg-white/[0.05] border border-white/15 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-400">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-300 mb-1">Tuya Access Secret:</label>
+              <input id="setting-tuya-secret" type="password" placeholder="z.B. a82f7c0xxxxxxxxxxxxxxxxx"
+                class="w-full bg-white/[0.05] border border-white/15 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-400">
+            </div>
+            <div class="pt-1 flex gap-2">
+              <button onclick="testTuyaConnection()" class="px-3.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition cursor-pointer">
+                Verbindung testen
+              </button>
+              <button onclick="syncTuyaDevices()" class="px-3.5 py-1.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition cursor-pointer">
+                Aus Cloud importieren
+              </button>
+            </div>
+          </div>
+        </details>
+
+        <!-- SECTION 6: Reset / Standard -->
         <div class="p-3 rounded-2xl bg-white/[0.02] border border-white/10 flex justify-between items-center text-xs">
           <span class="text-slate-400">Steckdosen zurücksetzen:</span>
           <button onclick="resetToDefaultDevices()" class="px-3 py-1.5 rounded-full bg-rose-500/20 hover:bg-rose-500/35 text-rose-300 border border-rose-500/30 font-semibold transition cursor-pointer">

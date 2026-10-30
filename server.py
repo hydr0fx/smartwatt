@@ -1,15 +1,16 @@
 import asyncio
 import datetime
+import json
 import logging
 from contextlib import asynccontextmanager
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
-from pathlib import Path
 
 from database import (
     init_db, get_all_settings, get_setting, update_setting,
@@ -19,12 +20,23 @@ from database import (
 from simulator import DeviceSimulator
 from tuya_client import TuyaCloudClient
 
+# Official Tuya Device Sharing SDK (Home Assistant Standard QR Flow)
+try:
+    from tuya_sharing import LoginControl, Manager, CustomerApi
+    TUYA_SHARING_AVAILABLE = True
+except ImportError:
+    TUYA_SHARING_AVAILABLE = False
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("SmartWatt")
 
 simulator = DeviceSimulator()
 tuya_client: Optional[TuyaCloudClient] = None
+sharing_manager: Optional[Any] = None
 polling_active = True
+
+TUYA_CLIENT_ID = "HA_3y9q4ak7g4ephrvke"
+TUYA_SCHEMA = "haauthorize"
 
 def get_configured_tuya_client() -> Optional[TuyaCloudClient]:
     access_id = get_setting("tuya_access_id", "")
@@ -33,6 +45,28 @@ def get_configured_tuya_client() -> Optional[TuyaCloudClient]:
     uid = get_setting("tuya_uid", "")
     if access_id and access_secret:
         return TuyaCloudClient(access_id, access_secret, endpoint, uid)
+    return None
+
+def get_configured_sharing_manager() -> Optional[Any]:
+    global sharing_manager
+    if sharing_manager is not None:
+        return sharing_manager
+
+    if not TUYA_SHARING_AVAILABLE:
+        return None
+
+    user_code = get_setting("tuya_user_code", "")
+    terminal_id = get_setting("tuya_terminal_id", "")
+    endpoint = get_setting("tuya_endpoint", "")
+    token_json_str = get_setting("tuya_token_json", "")
+
+    if user_code and terminal_id and token_json_str:
+        try:
+            token_info = json.loads(token_json_str)
+            sharing_manager = Manager(TUYA_CLIENT_ID, user_code, terminal_id, endpoint, token_info)
+            return sharing_manager
+        except Exception as e:
+            logger.error(f"Failed to re-initialize Tuya Sharing Manager: {e}")
     return None
 
 async def background_poller():
@@ -47,30 +81,61 @@ async def background_poller():
             if sim_mode:
                 simulator.update()
             else:
-                # Poll real Tuya devices if configured
-                client = get_configured_tuya_client()
-                if client:
-                    devices = get_all_devices()
-                    for dev in devices:
-                        if dev.get("is_simulated"):
-                            continue
-                        dev_id = dev["id"]
-                        status = client.get_device_status(dev_id)
-                        if status:
-                            parsed = client.parse_energy_status(status)
-                            dev["is_on"] = parsed["is_on"]
-                            dev["power_w"] = parsed["power_w"]
-                            dev["voltage_v"] = parsed["voltage_v"]
-                            dev["current_ma"] = parsed["current_ma"]
-                            dev["last_seen"] = datetime.datetime.now().isoformat()
-                            if dev["power_w"] > dev.get("peak_power_w", 0.0):
-                                dev["peak_power_w"] = dev["power_w"]
-                            save_device(dev)
+                # 1. Try modern QR Sharing Manager first
+                mgr = get_configured_sharing_manager()
+                if mgr:
+                    try:
+                        mgr.update_device_cache()
+                        for dev_id, cust_dev in mgr.device_map.items():
+                            existing = get_device(dev_id)
+                            if existing and not existing.get("is_simulated"):
+                                raw_status = cust_dev.status or {}
+                                raw_power = float(raw_status.get("cur_power", 0.0))
+                                power_w = (raw_power / 10.0) if raw_power > 5000 else raw_power
+                                raw_v = float(raw_status.get("cur_voltage", 2300))
+                                voltage_v = (raw_v / 10.0) if raw_v > 500 else raw_v
+                                current_ma = float(raw_status.get("cur_current", 0.0))
+                                is_on = 1 if raw_status.get("switch_1", True) else 0
 
-                            # Log reading every ~30 seconds (tick % 6 == 0)
-                            if tick % 6 == 0:
-                                cost = (dev["power_w"] / 1000.0) * kwh_price
-                                log_history_reading(dev_id, dev["power_w"], dev.get("energy_today_kwh", 0.0), cost)
+                                existing["is_on"] = is_on
+                                existing["power_w"] = power_w
+                                existing["voltage_v"] = voltage_v
+                                existing["current_ma"] = current_ma
+                                existing["last_seen"] = datetime.datetime.now().isoformat()
+                                if power_w > existing.get("peak_power_w", 0.0):
+                                    existing["peak_power_w"] = power_w
+                                save_device(existing)
+
+                                if tick % 6 == 0:
+                                    cost = (power_w / 1000.0) * kwh_price
+                                    log_history_reading(dev_id, power_w, existing.get("energy_today_kwh", 0.0), cost)
+                    except Exception as err:
+                        logger.warning(f"Error polling via Tuya Sharing Manager: {err}")
+
+                # 2. Or fallback to classic Tuya Developer Client
+                else:
+                    client = get_configured_tuya_client()
+                    if client:
+                        devices = get_all_devices()
+                        for dev in devices:
+                            if dev.get("is_simulated"):
+                                continue
+                            dev_id = dev["id"]
+                            status = client.get_device_status(dev_id)
+                            if status:
+                                parsed = client.parse_energy_status(status)
+                                dev["is_on"] = parsed["is_on"]
+                                dev["power_w"] = parsed["power_w"]
+                                dev["voltage_v"] = parsed["voltage_v"]
+                                dev["current_ma"] = parsed["current_ma"]
+                                dev["last_seen"] = datetime.datetime.now().isoformat()
+                                if dev["power_w"] > dev.get("peak_power_w", 0.0):
+                                    dev["peak_power_w"] = dev["power_w"]
+                                save_device(dev)
+
+                                if tick % 6 == 0:
+                                    cost = (dev["power_w"] / 1000.0) * kwh_price
+                                    log_history_reading(dev_id, dev["power_w"], dev.get("energy_today_kwh", 0.0), cost)
 
             tick += 1
         except Exception as e:
@@ -117,6 +182,16 @@ class TuyaCreds(BaseModel):
     endpoint: Optional[str] = "https://openapi.tuyaeu.com"
     uid: Optional[str] = ""
 
+class TuyaQRRequest(BaseModel):
+    user_code: str
+
+class TuyaQRPoll(BaseModel):
+    token: str
+    user_code: str
+
+class JsonImportPayload(BaseModel):
+    devices: List[Dict[str, Any]]
+
 # API Endpoints
 @app.get("/api/settings")
 def api_get_settings():
@@ -134,7 +209,7 @@ def api_get_devices():
     kwh_price = float(get_setting("kwh_price", "0.34"))
     standby_th = float(get_setting("standby_threshold_w", "12.0"))
     overload_th = float(get_setting("overload_threshold_w", "2500.0"))
-    co2_factor = float(get_setting("co2_factor", "380.0")) # g CO2/kWh
+    co2_factor = float(get_setting("co2_factor", "380.0"))
 
     enriched = []
     for d in devices:
@@ -143,23 +218,19 @@ def api_get_devices():
         energy_today = float(d.get("energy_today_kwh", 0.0))
         energy_total = float(d.get("energy_total_kwh", 0.0))
 
-        # Real-time Burn Rate
         burn_rate_h = (power / 1000.0) * kwh_price if is_on else 0.0
         cost_day_rate = burn_rate_h * 24.0
-        cost_month_rate = burn_rate_h * 24.0 * 30.42
-        cost_year_rate = burn_rate_h * 24.0 * 365.0
+        cost_month_rate = cost_day_rate * 30.0
+        cost_year_rate = cost_day_rate * 365.0
 
-        # Accumulated Costs
         cost_today = energy_today * kwh_price
         cost_total = energy_total * kwh_price
         co2_today_g = energy_today * co2_factor
 
-        # Smart Insights
         is_standby = is_on and (0.5 <= power <= standby_th)
-        standby_annual_eur = ((power / 1000.0) * 24.0 * 365.0 * kwh_price) if is_standby else 0.0
+        standby_annual_eur = ((power / 1000.0) * 24.0 * 365.0 * kwhPrice) if is_standby else 0.0
         is_overloaded = power >= overload_th
 
-        # Timer countdown calculation
         time_left_sec = 0
         if d.get("auto_off_target_time"):
             try:
@@ -195,7 +266,7 @@ def api_get_summary():
     total_power = sum(d["power_w"] for d in devices if d["is_on"])
     total_burn_rate_h = (total_power / 1000.0) * kwh_price
     total_cost_day_rate = total_burn_rate_h * 24.0
-    total_cost_month_rate = total_burn_rate_h * 24.0 * 30.42
+    total_cost_month_rate = total_burn_rate_h * 24.0 * 30.0
     total_cost_year_rate = total_burn_rate_h * 24.0 * 365.0
 
     total_energy_today = sum(d["energy_today_kwh"] for d in devices)
@@ -235,11 +306,18 @@ def api_toggle_device(device_id: str, payload: Optional[DeviceToggle] = None):
         dev["power_w"] = 0.0
         dev["current_ma"] = 0.0
 
-    # If it's a real Tuya device, send command
+    # If it's a real device, send command
     if not dev.get("is_simulated"):
-        client = get_configured_tuya_client()
-        if client:
-            client.send_command(device_id, [{"code": "switch_1", "value": bool(new_state)}])
+        mgr = get_configured_sharing_manager()
+        if mgr:
+            try:
+                mgr.send_commands(device_id, [{"code": "switch_1", "value": bool(new_state)}])
+            except Exception as e:
+                logger.error(f"Error sending command via Sharing Manager: {e}")
+        else:
+            client = get_configured_tuya_client()
+            if client:
+                client.send_command(device_id, [{"code": "switch_1", "value": bool(new_state)}])
 
     save_device(dev)
     return {"status": "ok", "id": device_id, "is_on": new_state}
@@ -261,22 +339,6 @@ def api_set_timer(device_id: str, payload: DeviceTimer):
     save_device(dev)
     return {"status": "ok", "auto_off_timer_min": dev["auto_off_timer_min"]}
 
-@app.post("/api/devices/{device_id}/edit")
-def api_edit_device(device_id: str, payload: DeviceEdit):
-    dev = get_device(device_id)
-    if not dev:
-        raise HTTPException(status_code=404, detail="Device not found")
-
-    if payload.name:
-        dev["name"] = payload.name
-    if payload.icon:
-        dev["icon"] = payload.icon
-    if payload.category:
-        dev["category"] = payload.category
-
-    save_device(dev)
-    return {"status": "ok", "device": dev}
-
 @app.delete("/api/devices/{device_id}")
 def api_delete_device(device_id: str):
     conn = get_db()
@@ -295,6 +357,137 @@ def api_get_history(hours: int = 24, device_id: Optional[str] = None):
 def api_get_weekly():
     return get_weekly_stats()
 
+# ========================================================
+# SUPER-EASY SMART LIFE QR CODE IMPORT FLOW
+# ========================================================
+
+@app.post("/api/tuya/qr-request")
+def api_tuya_qr_request(req: TuyaQRRequest):
+    if not TUYA_SHARING_AVAILABLE:
+        raise HTTPException(status_code=500, detail="tuya-device-sharing-sdk ist nicht verfügbar.")
+
+    user_code = req.user_code.strip()
+    if not user_code:
+        raise HTTPException(status_code=400, detail="Bitte gib deinen Benutzer-Code (User Code) aus der Smart Life App ein.")
+
+    lc = LoginControl()
+    res = lc.qr_code(TUYA_CLIENT_ID, TUYA_SCHEMA, user_code)
+
+    if not res.get("success"):
+        return JSONResponse(status_code=400, content={
+            "status": "error",
+            "message": res.get("msg", "Ungültiger Benutzer-Code. Bitte prüfe Groß-/Kleinschreibung in Smart Life.")
+        })
+
+    token = res.get("result", {}).get("qrcode")
+    qr_data = f"tuyaSmart--qrLogin?token={token}"
+
+    return {
+        "status": "success",
+        "token": token,
+        "qr_data": qr_data,
+        "qr_image_url": f"https://api.qrserver.com/v1/create-qr-code/?size=240x240&data={qr_data}&bgcolor=060911&color=10b981",
+        "user_code": user_code
+    }
+
+@app.post("/api/tuya/qr-poll")
+def api_tuya_qr_poll(req: TuyaQRPoll):
+    global sharing_manager
+    if not TUYA_SHARING_AVAILABLE:
+        raise HTTPException(status_code=500, detail="tuya-device-sharing-sdk ist nicht verfügbar.")
+
+    lc = LoginControl()
+    success, info = lc.login_result(req.token, TUYA_CLIENT_ID, req.user_code)
+
+    if not success:
+        return {"status": "waiting", "message": info.get("msg", "Warten auf Scan...")}
+
+    logger.info("Tuya Smart Life login successfully confirmed via QR scan!")
+    terminal_id = info.get("terminal_id", "")
+    endpoint = info.get("endpoint", "https://openapi.tuyaeu.com")
+
+    # Persist credentials
+    update_setting("tuya_user_code", req.user_code)
+    update_setting("tuya_terminal_id", terminal_id)
+    update_setting("tuya_endpoint", endpoint)
+    update_setting("tuya_token_json", json.dumps(info))
+    update_setting("simulation_mode", "false")
+
+    # Initialize manager and query real devices
+    sharing_manager = Manager(TUYA_CLIENT_ID, req.user_code, terminal_id, endpoint, info)
+    sharing_manager.update_device_cache()
+
+    imported_devices = []
+    now = datetime.datetime.now().isoformat()
+
+    for dev_id, dev in sharing_manager.device_map.items():
+        raw_status = dev.status or {}
+        raw_p = float(raw_status.get("cur_power", 0.0))
+        power_w = (raw_p / 10.0) if raw_p > 5000 else raw_p
+        raw_v = float(raw_status.get("cur_voltage", 2300))
+        voltage_v = (raw_v / 10.0) if raw_v > 500 else raw_v
+        current_ma = float(raw_status.get("cur_current", 0.0))
+        is_on = 1 if raw_status.get("switch_1", True) else 0
+
+        name_lower = dev.name.lower()
+        category = "entertainment"
+        if any(w in name_lower for w in ["küche", "kaffee", "fridge", "kühlschrank", "ofen", "wasser"]):
+            category = "kitchen"
+        elif any(w in name_lower for w in ["bad", "wasch", "trockner", "pumpe", "boiler", "heiz"]):
+            category = "utility"
+
+        new_dev = {
+            "id": dev_id,
+            "name": dev.name,
+            "icon": "coffee" if category == "kitchen" else ("washing-machine" if category == "utility" else "plug"),
+            "category": category,
+            "room_name": "Smart Life",
+            "is_on": is_on,
+            "power_w": power_w,
+            "voltage_v": voltage_v,
+            "current_ma": current_ma,
+            "energy_today_kwh": 0.0,
+            "energy_total_kwh": 0.0,
+            "peak_power_w": power_w,
+            "auto_off_timer_min": 0,
+            "auto_off_target_time": None,
+            "last_seen": now,
+            "is_simulated": 0
+        }
+        save_device(new_dev)
+        imported_devices.append(new_dev)
+
+    return {
+        "status": "success",
+        "imported": len(imported_devices),
+        "devices": imported_devices
+    }
+
+# ========================================================
+# JSON EXPORT & IMPORT (For Instant Sync Across Devices)
+# ========================================================
+
+@app.get("/api/devices/export-json")
+def api_export_devices_json():
+    devices = get_all_devices()
+    settings = get_all_settings()
+    return {
+        "export_date": datetime.datetime.now().isoformat(),
+        "settings": settings,
+        "devices": devices
+    }
+
+@app.post("/api/devices/import-json")
+def api_import_devices_json(payload: JsonImportPayload):
+    imported_count = 0
+    for dev in payload.devices:
+        if not dev.get("id"):
+            dev["id"] = f"plug-{int(datetime.datetime.now().timestamp()*1000)}"
+        save_device(dev)
+        imported_count += 1
+    return {"status": "ok", "imported": imported_count}
+
+# Legacy Tuya Developer API Endpoints
 @app.post("/api/tuya/test")
 def api_test_tuya(creds: TuyaCreds):
     client = TuyaCloudClient(creds.access_id, creds.access_secret, creds.endpoint or "https://openapi.tuyaeu.com", creds.uid or "")
@@ -343,8 +536,7 @@ def api_sync_tuya():
                 "auto_off_timer_min": 0,
                 "auto_off_target_time": None,
                 "last_seen": now,
-                "is_simulated": 0,
-                "custom_order": 10 + imported_count
+                "is_simulated": 0
             }
             save_device(new_dev)
             imported_count += 1
