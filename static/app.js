@@ -1,4 +1,4 @@
-// SmartWatt - Unified Frontend & In-Browser Engine (Works both with Backend & Standalone 24/7)
+// SmartWatt - Unified High-Performance Frontend & Reactive In-Browser Engine
 let isStandaloneMode = false;
 let currentDevices = [];
 let currentSettings = {
@@ -13,14 +13,16 @@ let currentSettings = {
 };
 
 let activeTimerDeviceId = null;
+let activeCalcDeviceId = null;
 let activeChartTab = 'power';
 let powerChartInstance = null;
 let distributionChartInstance = null;
 let weeklyChartInstance = null;
 let pollingTimer = null;
 let tickCount = 0;
+let isQuickPriceOpen = false;
 
-// Standalone in-browser simulation seed
+// Default device profiles with typical active power
 const defaultStandaloneDevices = [
   {
     id: "demo-gaming-pc",
@@ -30,12 +32,13 @@ const defaultStandaloneDevices = [
     is_on: 1,
     power_w: 408.0,
     voltage_v: 231.4,
-    current_ma: 1765.0,
+    current_ma: 1763.0,
     energy_today_kwh: 2.45,
     energy_total_kwh: 48.2,
     peak_power_w: 580.0,
     is_simulated: 1,
-    timer_seconds_left: 0
+    timer_seconds_left: 0,
+    _saved_power_w: 408.0
   },
   {
     id: "demo-fridge",
@@ -50,7 +53,8 @@ const defaultStandaloneDevices = [
     energy_total_kwh: 29.5,
     peak_power_w: 140.0,
     is_simulated: 1,
-    timer_seconds_left: 0
+    timer_seconds_left: 0,
+    _saved_power_w: 78.5
   },
   {
     id: "demo-washing",
@@ -65,7 +69,8 @@ const defaultStandaloneDevices = [
     energy_total_kwh: 84.1,
     peak_power_w: 2150.0,
     is_simulated: 1,
-    timer_seconds_left: 0
+    timer_seconds_left: 0,
+    _saved_power_w: 1850.0
   },
   {
     id: "demo-tv",
@@ -73,14 +78,15 @@ const defaultStandaloneDevices = [
     icon: "tv",
     category: "entertainment",
     is_on: 1,
-    power_w: 6.8, // Standby demonstration
+    power_w: 6.8, // In Standby to highlight vampire detector
     voltage_v: 232.0,
     current_ma: 29.0,
     energy_today_kwh: 0.32,
     energy_total_kwh: 19.3,
     peak_power_w: 135.0,
     is_simulated: 1,
-    timer_seconds_left: 0
+    timer_seconds_left: 0,
+    _saved_power_w: 6.8
   }
 ];
 
@@ -93,14 +99,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW reg error:', err));
   }
 
-  // Detect if backend is available
+  // Detect backend
   await checkBackendAvailability();
-
   await loadSettings();
-  await updateAll();
+  await updateAll(true);
   await initCharts();
 
-  // Live polling / client tick loop every 3 seconds
+  // Background ticker (every 3 seconds)
   pollingTimer = setInterval(async () => {
     tickCount++;
     if (isStandaloneMode) {
@@ -112,19 +117,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function checkBackendAvailability() {
   try {
-    const res = await fetch('/api/summary', { method: 'GET', signal: AbortSignal.timeout(1500) });
+    const res = await fetch('/api/summary', { method: 'GET', signal: AbortSignal.timeout(1200) });
     if (res.ok) {
       isStandaloneMode = false;
       return;
     }
-  } catch (e) {
-    // Backend unreachable -> activate 24/7 in-browser engine
-  }
+  } catch (e) {}
+  
   isStandaloneMode = true;
-  console.log("Running in 24/7 In-Browser Autonomous Mode");
+  console.log("Running in 24/7 Autonomous Cloud Engine");
 
-  // Load from localStorage if present
-  const savedDevs = localStorage.getItem('smartwatt_devices');
+  const savedDevs = localStorage.getItem('smartwatt_devices_v2');
   if (savedDevs) {
     try { currentDevices = JSON.parse(savedDevs); } catch (e) { currentDevices = defaultStandaloneDevices; }
   } else {
@@ -137,17 +140,18 @@ async function checkBackendAvailability() {
   }
 }
 
-// In-Browser Simulation Tick
+// In-Browser Simulation Loop
 function runStandaloneTick() {
-  const kwhPrice = parseFloat(currentSettings.kwh_price || '0.34');
-
   currentDevices.forEach(d => {
-    // Handle countdown timer
+    // Handle timer
     if (d.timer_seconds_left > 0) {
       d.timer_seconds_left -= 3;
       if (d.timer_seconds_left <= 0) {
         d.timer_seconds_left = 0;
         d.is_on = 0;
+        d._saved_power_w = d.power_w;
+        d.power_w = 0.0;
+        d.current_ma = 0.0;
       }
     }
 
@@ -176,40 +180,46 @@ function runStandaloneTick() {
         d.voltage_v = 232.0;
       }
 
+      d._saved_power_w = d.power_w;
       d.current_ma = (d.power_w / d.voltage_v) * 1000.0;
       if (d.power_w > d.peak_power_w) d.peak_power_w = d.power_w;
 
-      // Energy accumulation
+      // Real energy accumulation: P * (t / 3600)
       const addedKwh = (d.power_w / 1000.0) * (3.0 / 3600.0);
       d.energy_today_kwh += addedKwh;
       d.energy_total_kwh += addedKwh;
     }
   });
 
-  localStorage.setItem('smartwatt_devices', JSON.stringify(currentDevices));
+  localStorage.setItem('smartwatt_devices_v2', JSON.stringify(currentDevices));
 }
 
-// Compute Enriched Stats for Devices
+// Compute mathematically exact enriched stats
 function enrichDevice(d) {
   const kwhPrice = parseFloat(currentSettings.kwh_price || '0.34');
   const standbyTh = parseFloat(currentSettings.standby_threshold_w || '12.0');
   const overloadTh = parseFloat(currentSettings.overload_threshold_w || '2500.0');
 
-  const power = d.is_on ? d.power_w : 0.0;
+  const power = d.is_on ? (d.power_w || 0.0) : 0.0;
+  
+  // Burn Rates
   const burnRateH = (power / 1000.0) * kwhPrice;
   const costDayRate = burnRateH * 24.0;
-  const costMonthRate = burnRateH * 24.0 * 30.42;
-  const costYearRate = burnRateH * 24.0 * 365.0;
+  const costMonthRate = costDayRate * 30.0;  // Standard 30 days
+  const costYearRate = costDayRate * 365.0;  // Standard 365 days
 
-  const costToday = d.energy_today_kwh * kwhPrice;
-  const costTotal = d.energy_total_kwh * kwhPrice;
+  // Accumulated Costs
+  const costToday = (d.energy_today_kwh || 0.0) * kwhPrice;
+  const costTotal = (d.energy_total_kwh || 0.0) * kwhPrice;
 
+  // Standby & Overload
   const isStandby = Boolean(d.is_on && power >= 0.5 && power <= standbyTh);
   const standbyAnnual = isStandby ? ((power / 1000.0) * 24.0 * 365.0 * kwhPrice) : 0.0;
   const isOverloaded = power >= overloadTh;
 
   return {
     ...d,
+    power_w: power,
     burn_rate_eur_h: burnRateH,
     cost_day_rate_eur: costDayRate,
     cost_month_rate_eur: costMonthRate,
@@ -222,8 +232,8 @@ function enrichDevice(d) {
   };
 }
 
-// Update UI
-async function updateAll(fullRebuild = true) {
+// Master Update Loop
+async function updateAll(fullRebuild = false) {
   let devices = [];
   let summary = {};
 
@@ -246,7 +256,7 @@ async function updateAll(fullRebuild = true) {
     const kwhPrice = parseFloat(currentSettings.kwh_price || '0.34');
     const totalPower = devices.reduce((sum, d) => sum + (d.is_on ? d.power_w : 0), 0);
     const totalBurnRateH = (totalPower / 1000.0) * kwhPrice;
-    const totalEnergyToday = devices.reduce((sum, d) => sum + d.energy_today_kwh, 0);
+    const totalEnergyToday = devices.reduce((sum, d) => sum + (d.energy_today_kwh || 0), 0);
     const standbyDevs = devices.filter(d => d.is_standby);
     const activeCount = devices.filter(d => d.is_on && d.power_w > 0.5).length;
 
@@ -254,7 +264,7 @@ async function updateAll(fullRebuild = true) {
       total_power_w: totalPower,
       total_burn_rate_eur_h: totalBurnRateH,
       total_cost_day_rate_eur: totalBurnRateH * 24.0,
-      total_cost_month_rate_eur: totalBurnRateH * 24.0 * 30.42,
+      total_cost_month_rate_eur: totalBurnRateH * 24.0 * 30.0,
       total_cost_today_eur: totalEnergyToday * kwhPrice,
       total_energy_today_kwh: totalEnergyToday,
       total_co2_today_kg: (totalEnergyToday * 380.0) / 1000.0,
@@ -266,11 +276,11 @@ async function updateAll(fullRebuild = true) {
     };
   }
 
-  // Render Top KPI Cards
+  // Instant update of Top KPI Cards
   document.getElementById('kpi-total-power').textContent = Math.round(summary.total_power_w).toLocaleString('de-DE');
   document.getElementById('kpi-active-count').textContent = summary.active_devices_count;
   document.getElementById('kpi-total-count').textContent = summary.device_count;
-  document.getElementById('kpi-active-devices-detail').textContent = `${summary.active_devices_count} eingeschaltet`;
+  document.getElementById('kpi-active-devices-detail').textContent = `${summary.active_devices_count} von ${summary.device_count} an`;
 
   document.getElementById('kpi-burn-rate-h').textContent = summary.total_burn_rate_eur_h.toFixed(3).replace('.', ',');
   document.getElementById('kpi-cost-day').textContent = `${summary.total_cost_day_rate_eur.toFixed(2).replace('.', ',')} €`;
@@ -283,8 +293,21 @@ async function updateAll(fullRebuild = true) {
   document.getElementById('kpi-vampire-count').textContent = summary.standby_vampire_count;
   document.getElementById('kpi-vampire-savings').textContent = `~${summary.standby_potential_annual_eur.toFixed(2).replace('.', ',')} € / Jahr`;
 
+  // Pulse dot color (green when on, slate when all off)
+  const dot = document.getElementById('kpi-live-dot');
+  if (dot) {
+    if (summary.total_power_w > 0) {
+      dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 pulse-dot';
+    } else {
+      dot.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+    }
+  }
+
   updateModeBadge(isStandaloneMode || summary.simulation_mode);
   renderDeviceGrid(devices, fullRebuild);
+
+  // Keep charts in sync
+  if (distributionChartInstance) updateDistributionChart(false);
 }
 
 function updateModeBadge(isSimulation) {
@@ -316,9 +339,14 @@ function renderDeviceGrid(devices, fullRebuild) {
     const card = document.getElementById(`dev-card-${d.id}`);
     if (!card) return;
 
+    // Power text & glow
     const powerEl = card.querySelector('.dev-power-value');
-    if (powerEl) powerEl.textContent = d.is_on ? Math.round(d.power_w).toLocaleString('de-DE') : '0';
+    if (powerEl) {
+      powerEl.textContent = d.is_on ? Math.round(d.power_w).toLocaleString('de-DE') : '0';
+      powerEl.className = `dev-power-value text-2xl font-black font-mono tracking-tight ${!d.is_on ? 'text-slate-500' : (d.power_w < 100 ? 'text-emerald-400 glow-emerald' : (d.power_w < 1000 ? 'text-amber-400 glow-amber' : 'text-orange-400 glow-amber'))}`;
+    }
 
+    // Rates
     const burnEl = card.querySelector('.dev-burn-rate');
     if (burnEl) burnEl.textContent = d.is_on ? `${d.burn_rate_eur_h.toFixed(3).replace('.', ',')} €/h` : '0,000 €/h';
 
@@ -328,44 +356,51 @@ function renderDeviceGrid(devices, fullRebuild) {
     const monthEl = card.querySelector('.dev-cost-month');
     if (monthEl) monthEl.textContent = d.is_on ? `${d.cost_month_rate_eur.toFixed(2).replace('.', ',')} €/Monat` : '0,00 €/Monat';
 
+    // Switch state
     const switchEl = card.querySelector('.dev-switch-input');
-    if (switchEl) switchEl.checked = Boolean(d.is_on);
+    if (switchEl && switchEl.checked !== Boolean(d.is_on)) {
+      switchEl.checked = Boolean(d.is_on);
+    }
 
+    // Telemetry
     const vEl = card.querySelector('.dev-voltage');
-    if (vEl) vEl.textContent = `${d.voltage_v.toFixed(1).replace('.', ',')} V`;
+    if (vEl) vEl.textContent = `${(d.voltage_v || 230).toFixed(1).replace('.', ',')} V`;
 
     const iEl = card.querySelector('.dev-current');
-    if (iEl) iEl.textContent = d.current_ma > 1000 ? `${(d.current_ma / 1000).toFixed(2).replace('.', ',')} A` : `${Math.round(d.current_ma)} mA`;
+    if (iEl) iEl.textContent = d.current_ma > 1000 ? `${(d.current_ma / 1000).toFixed(2).replace('.', ',')} A` : `${Math.round(d.current_ma || 0)} mA`;
 
     const todayEl = card.querySelector('.dev-today-stats');
-    if (todayEl) todayEl.textContent = `${d.energy_today_kwh.toFixed(2).replace('.', ',')} kWh (~${d.cost_today_eur.toFixed(2).replace('.', ',')} €)`;
+    if (todayEl) todayEl.textContent = `${(d.energy_today_kwh || 0).toFixed(2).replace('.', ',')} kWh (~${d.cost_today_eur.toFixed(2).replace('.', ',')} €)`;
 
     const peakEl = card.querySelector('.dev-peak-power');
-    if (peakEl) peakEl.textContent = `${Math.round(d.peak_power_w)} W`;
+    if (peakEl) peakEl.textContent = `${Math.round(d.peak_power_w || 0)} W`;
 
+    // Overload styling
     if (d.is_overloaded) {
       card.classList.add('border-rose-500', 'ring-2', 'ring-rose-500/50');
     } else {
       card.classList.remove('border-rose-500', 'ring-2', 'ring-rose-500/50');
     }
 
+    // Timer status
     const timerBtn = card.querySelector('.dev-timer-btn');
     if (timerBtn) {
       if (d.timer_seconds_left > 0) {
         const mins = Math.ceil(d.timer_seconds_left / 60);
         timerBtn.textContent = `⏱ Aus in ${mins}m`;
-        timerBtn.className = 'dev-timer-btn text-[11px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold';
+        timerBtn.className = 'dev-timer-btn text-[11px] px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold';
       } else {
         timerBtn.textContent = 'Timer';
-        timerBtn.className = 'dev-timer-btn text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700 font-semibold';
+        timerBtn.className = 'dev-timer-btn text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700 font-semibold transition';
       }
     }
 
+    // Vampire banner
     const vampireEl = card.querySelector('.dev-vampire-banner');
     if (vampireEl) {
       if (d.is_standby) {
         vampireEl.classList.remove('hidden');
-        vampireEl.querySelector('.dev-vampire-text').textContent = `Standby-Verlust: ${d.power_w.toFixed(1)}W (~${d.standby_annual_eur.toFixed(2).replace('.', ',')} €/J)`;
+        vampireEl.querySelector('.dev-vampire-text').textContent = `Standby: ${d.power_w.toFixed(1)}W (~${d.standby_annual_eur.toFixed(2).replace('.', ',')} €/J)`;
       } else {
         vampireEl.classList.add('hidden');
       }
@@ -382,26 +417,29 @@ function createDeviceCardHtml(d) {
   return `
     <div id="dev-card-${d.id}" class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between border ${isOverloaded ? 'border-rose-500 ring-2 ring-rose-500/50' : 'border-slate-800'} relative">
       <div>
+        <!-- Top Row: Icon, Name & Instant Switch -->
         <div class="flex justify-between items-start gap-3 mb-3">
           <div class="flex items-center gap-2.5">
-            <div class="w-10 h-10 rounded-xl bg-slate-800/90 border border-slate-700 flex items-center justify-center text-emerald-400">
+            <div class="w-10 h-10 rounded-xl bg-slate-800/90 border border-slate-700 flex items-center justify-center text-emerald-400 shrink-0">
               <i data-lucide="${icon}" class="w-5 h-5"></i>
             </div>
             <div>
-              <h3 class="font-bold text-sm text-white tracking-tight">${d.name}</h3>
-              <div class="flex items-center gap-1.5 mt-0.5">
+              <h3 class="font-bold text-sm text-white tracking-tight leading-tight">${d.name}</h3>
+              <div class="flex items-center gap-1.5 mt-1">
                 <span class="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700/60">${d.category || 'Steckdose'}</span>
                 <span class="text-[9px] uppercase px-1 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/50 font-mono">Smart Life</span>
               </div>
             </div>
           </div>
 
-          <label class="switch">
+          <!-- Fast Switch -->
+          <label class="switch shrink-0" title="Klicken für Sofort-Schaltung">
             <input type="checkbox" class="dev-switch-input" ${d.is_on ? 'checked' : ''} onchange="toggleDevice('${d.id}', this.checked)">
             <span class="slider"></span>
           </label>
         </div>
 
+        <!-- Overload Alert Banner -->
         ${isOverloaded ? `
           <div class="mb-3 px-2.5 py-1.5 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-semibold flex items-center gap-1.5 animate-pulse">
             <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-400 shrink-0"></i>
@@ -409,17 +447,19 @@ function createDeviceCardHtml(d) {
           </div>
         ` : ''}
 
+        <!-- Standby Vampire Banner -->
         <div class="dev-vampire-banner mb-3 px-2.5 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-medium flex items-center justify-between gap-1.5 ${isStandby ? '' : 'hidden'}">
           <div class="flex items-center gap-1.5">
             <i data-lucide="battery-charging" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
             <span class="dev-vampire-text text-[11px]">Standby: ${d.power_w.toFixed(1)}W (~${d.standby_annual_eur.toFixed(2).replace('.', ',')} €/J)</span>
           </div>
-          <button onclick="toggleDevice('${d.id}', false)" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/30 hover:bg-amber-500/50 text-white font-bold transition">Aus</button>
+          <button onclick="toggleDevice('${d.id}', false)" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/30 hover:bg-amber-500/50 text-white font-bold transition">Ausschalten</button>
         </div>
 
+        <!-- Live Power Display -->
         <div class="my-3 py-2 px-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
           <div class="flex items-baseline justify-between">
-            <span class="text-xs text-slate-400 font-medium">Aktuelle Last:</span>
+            <span class="text-xs text-slate-400 font-medium">Momentan-Last:</span>
             <div class="flex items-baseline gap-1">
               <span class="dev-power-value text-2xl font-black font-mono tracking-tight ${powerColor}">
                 ${d.is_on ? Math.round(d.power_w).toLocaleString('de-DE') : '0'}
@@ -428,82 +468,230 @@ function createDeviceCardHtml(d) {
             </div>
           </div>
 
+          <!-- Real-Time Cost Breakdown -->
           <div class="mt-2 pt-2 border-t border-slate-800/80 space-y-1">
             <div class="flex justify-between items-center text-xs">
-              <span class="text-slate-400 font-medium">Kosten jetzt:</span>
+              <span class="text-slate-400 font-medium">Kostenrate jetzt:</span>
               <strong class="dev-burn-rate font-mono text-emerald-400 font-semibold">
                 ${d.is_on ? d.burn_rate_eur_h.toFixed(3).replace('.', ',') + ' €/h' : '0,000 €/h'}
               </strong>
             </div>
 
             <div class="flex justify-between items-center text-[11px] text-slate-400 font-mono">
-              <span class="dev-cost-day">${d.is_on ? d.cost_day_rate_eur.toFixed(2).replace('.', ',')} €/Tag` : '0,00 €/Tag'}</span>
+              <span class="dev-cost-day">${d.is_on ? d.cost_day_rate_eur.toFixed(2).replace('.', ',') + ' €/Tag' : '0,00 €/Tag'}</span>
               <span class="dev-cost-month">${d.is_on ? d.cost_month_rate_eur.toFixed(2).replace('.', ',')} €/Monat` : '0,00 €/Monat'}</span>
             </div>
           </div>
         </div>
 
+        <!-- Electrical Telemetry Specs -->
         <div class="grid grid-cols-3 gap-1 py-1 px-2 rounded-lg bg-slate-950/40 text-[10px] text-slate-400 font-mono border border-slate-800/50">
-          <div>Volt: <span class="dev-voltage text-slate-200 font-bold">${d.voltage_v.toFixed(1).replace('.', ',')} V</span></div>
-          <div class="text-center">Strom: <span class="dev-current text-slate-200 font-bold">${d.current_ma > 1000 ? (d.current_ma / 1000).toFixed(2).replace('.', ',')} A` : Math.round(d.current_ma) + ' mA'}</span></div>
-          <div class="text-right">Peak: <span class="dev-peak-power text-slate-200 font-bold">${Math.round(d.peak_power_w)} W</span></div>
+          <div>Volt: <span class="dev-voltage text-slate-200 font-bold">${(d.voltage_v || 230).toFixed(1).replace('.', ',')} V</span></div>
+          <div class="text-center">Strom: <span class="dev-current text-slate-200 font-bold">${d.current_ma > 1000 ? (d.current_ma / 1000).toFixed(2).replace('.', ',') + ' A' : Math.round(d.current_ma || 0) + ' mA'}</span></div>
+          <div class="text-right">Peak: <span class="dev-peak-power text-slate-200 font-bold">${Math.round(d.peak_power_w || 0)} W</span></div>
         </div>
       </div>
 
-      <div class="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-xs">
-        <div>
-          <div class="text-[10px] text-slate-400 uppercase font-semibold">Heute bisher:</div>
-          <div class="dev-today-stats text-slate-200 font-mono font-bold text-[11px]">
-            ${d.energy_today_kwh.toFixed(2).replace('.', ',')} kWh (~${d.cost_today_eur.toFixed(2).replace('.', ',')} €)
-          </div>
+      <!-- Bottom Row: Accumulated Today & Action Buttons -->
+      <div class="mt-3 pt-2.5 border-t border-slate-800/80 space-y-2">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-[10px] text-slate-400 uppercase font-semibold">Heute bisher:</span>
+          <span class="dev-today-stats text-slate-200 font-mono font-bold text-[11px]">
+            ${(d.energy_today_kwh || 0).toFixed(2).replace('.', ',')} kWh (~${d.cost_today_eur.toFixed(2).replace('.', ',')} €)
+          </span>
         </div>
 
-        <button onclick="openTimerModal('${d.id}', '${d.name.replace(/'/g, "\\'")}')" class="dev-timer-btn text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold transition flex items-center gap-1">
-          <i data-lucide="clock" class="w-3 h-3"></i>
-          <span>${d.timer_seconds_left > 0 ? `⏱ Aus in ${Math.ceil(d.timer_seconds_left / 60)}m` : 'Timer'}</span>
-        </button>
+        <div class="flex items-center justify-between gap-1.5 pt-1">
+          <!-- Rechner Button -->
+          <button onclick="openCalcModal('${d.id}')" class="flex-1 py-1 px-2 rounded-lg bg-emerald-600/15 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold transition flex items-center justify-center gap-1 shadow-sm">
+            <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
+            <span>Rechner</span>
+          </button>
+
+          <!-- Timer Button -->
+          <button onclick="openTimerModal('${d.id}', '${d.name.replace(/'/g, "\\'")}')" class="dev-timer-btn flex-1 py-1 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-semibold transition flex items-center justify-center gap-1">
+            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+            <span>${d.timer_seconds_left > 0 ? `⏱ ${Math.ceil(d.timer_seconds_left / 60)}m` : 'Timer'}</span>
+          </button>
+        </div>
       </div>
     </div>
   `;
 }
 
-// Toggle Device State
+// INSTANT ZERO-LATENCY TOGGLE FUNCTION
 async function toggleDevice(deviceId, targetState) {
-  if (isStandaloneMode) {
-    const dev = currentDevices.find(d => d.id === deviceId);
-    if (dev) {
-      dev.is_on = targetState ? 1 : 0;
-      if (!dev.is_on) {
-        dev.power_w = 0.0;
-        dev.current_ma = 0.0;
-      }
-      localStorage.setItem('smartwatt_devices', JSON.stringify(currentDevices));
-      await updateAll(false);
-    }
-    return;
+  const dev = currentDevices.find(d => d.id === deviceId);
+  if (!dev) return;
+
+  // 1. Instant local state update
+  dev.is_on = targetState ? 1 : 0;
+  if (!dev.is_on) {
+    dev._saved_power_w = dev.power_w > 0 ? dev.power_w : dev._saved_power_w;
+    dev.power_w = 0.0;
+    dev.current_ma = 0.0;
+  } else {
+    // Restore previous power or sensible default
+    dev.power_w = dev._saved_power_w && dev._saved_power_w > 0 ? dev._saved_power_w : (
+      dev.id === 'demo-gaming-pc' ? 408.0 : (
+      dev.id === 'demo-fridge' ? 78.5 : (
+      dev.id === 'demo-washing' ? 1850.0 : 6.8
+    )));
+    dev.voltage_v = 230.5;
+    dev.current_ma = (dev.power_w / dev.voltage_v) * 1000.0;
   }
 
-  try {
-    const res = await fetch(`/api/devices/${deviceId}/toggle`, {
+  // 2. Synchronous UI Update with ZERO LATENCY
+  if (isStandaloneMode) {
+    localStorage.setItem('smartwatt_devices_v2', JSON.stringify(currentDevices));
+  }
+  await updateAll(false);
+
+  // 3. Background API call if backend mode
+  if (!isStandaloneMode) {
+    fetch(`/api/devices/${deviceId}/toggle`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_on: targetState })
-    });
-    if (res.ok) await updateAll(false);
-  } catch (err) {
-    console.error('Toggle failed:', err);
+    }).catch(err => console.error('Background toggle failed:', err));
   }
 }
 
+// INSTANT BATCH TOGGLE ALL
 async function toggleAllDevices() {
   const anyOn = currentDevices.some(d => d.is_on);
   const targetState = !anyOn;
-  for (const d of currentDevices) {
-    await toggleDevice(d.id, targetState);
+
+  currentDevices.forEach(d => {
+    d.is_on = targetState ? 1 : 0;
+    if (!d.is_on) {
+      d._saved_power_w = d.power_w > 0 ? d.power_w : d._saved_power_w;
+      d.power_w = 0.0;
+      d.current_ma = 0.0;
+    } else {
+      d.power_w = d._saved_power_w && dev._saved_power_w > 0 ? dev._saved_power_w : (
+        d.id === 'demo-gaming-pc' ? 408.0 : (
+        d.id === 'demo-fridge' ? 78.5 : (
+        d.id === 'demo-washing' ? 1850.0 : 6.8
+      )));
+      d.current_ma = (d.power_w / 230.0) * 1000.0;
+    }
+  });
+
+  if (isStandaloneMode) {
+    localStorage.setItem('smartwatt_devices_v2', JSON.stringify(currentDevices));
+  }
+  await updateAll(false);
+
+  if (!isStandaloneMode) {
+    for (const d of currentDevices) {
+      fetch(`/api/devices/${d.id}/toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_on: targetState })
+      }).catch(e => {});
+    }
   }
 }
 
-// Timer Modal Operations
+// QUICK PRICE BAR (REAL-TIME SLIDER)
+function toggleQuickPriceBar() {
+  const bar = document.getElementById('quick-price-bar');
+  const arrow = document.getElementById('quick-price-arrow');
+  isQuickPriceOpen = !isQuickPriceOpen;
+  if (isQuickPriceOpen) {
+    bar.classList.remove('hidden');
+    arrow.classList.add('rotate-180');
+  } else {
+    bar.classList.add('hidden');
+    arrow.classList.remove('rotate-180');
+  }
+}
+
+function onQuickPriceChange(newPriceVal) {
+  const num = parseFloat(newPriceVal);
+  if (isNaN(num) || num <= 0) return;
+
+  currentSettings.kwh_price = num.toFixed(2);
+  document.getElementById('header-price-display').textContent = `${num.toFixed(2).replace('.', ',')} €/kWh`;
+  document.getElementById('quick-price-slider').value = num.toFixed(2);
+  document.getElementById('quick-price-label').textContent = `${num.toFixed(2).replace('.', ',')} €`;
+  document.getElementById('setting-kwh-price').value = num.toFixed(2);
+
+  if (isStandaloneMode) {
+    localStorage.setItem('smartwatt_settings', JSON.stringify(currentSettings));
+  }
+
+  // Live recalculate EVERYTHING immediately
+  updateAll(false);
+}
+
+// ZEITRAUM-KOSTENRECHNER MODAL
+function openCalcModal(deviceId) {
+  activeCalcDeviceId = deviceId;
+  const dev = currentDevices.find(d => d.id === deviceId);
+  if (!dev) return;
+
+  const currentW = dev.is_on ? Math.round(dev.power_w) : Math.round(dev._saved_power_w || 400);
+  const currentPrice = parseFloat(currentSettings.kwh_price || '0.34');
+
+  document.getElementById('calc-modal-dev-name').textContent = `${dev.name} (Live)`;
+  document.getElementById('calc-watt-input').value = currentW > 0 ? currentW : 400;
+  document.getElementById('calc-price-input').value = currentPrice.toFixed(2);
+  document.getElementById('calc-modal').classList.remove('hidden');
+
+  recalculateCustomCalc();
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeCalcModal() {
+  activeCalcDeviceId = null;
+  document.getElementById('calc-modal').classList.add('hidden');
+}
+
+function recalculateCustomCalc() {
+  const w = parseFloat(document.getElementById('calc-watt-input').value) || 0;
+  const price = parseFloat(document.getElementById('calc-price-input').value) || 0;
+  const hoursDaily = parseFloat(document.getElementById('calc-hours-slider').value) || 4;
+
+  document.getElementById('calc-slider-hours-label').textContent = `${hoursDaily.toFixed(1).replace('.', ',')} Stunden / Tag`;
+
+  const kwhPerHour = w / 1000.0;
+  const costPerHour = kwhPerHour * price;
+
+  // Intervall-Tabelle
+  const intervals = [
+    { id: '1h', hours: 1 },
+    { id: '2h', hours: 2 },
+    { id: '4h', hours: 4 },
+    { id: '8h', hours: 8 },
+    { id: '1d', hours: 24 },
+    { id: '1w', hours: 24 * 7 },
+    { id: '1m', hours: 24 * 30 },
+    { id: '1y', hours: 24 * 365 }
+  ];
+
+  intervals.forEach(item => {
+    const cost = costPerHour * item.hours;
+    const kwh = kwhPerHour * item.hours;
+    const resEl = document.getElementById(`calc-res-${item.id}`);
+    const kwhEl = document.getElementById(`calc-kwh-${item.id}`);
+
+    if (resEl) resEl.textContent = (item.hours >= 24 ? cost.toFixed(2) : cost.toFixed(3)).replace('.', ',') + ' €';
+    if (kwhEl) kwhEl.textContent = kwh.toFixed(2).replace('.', ',') + ' kWh';
+  });
+
+  // Custom Slider Usage Calculation
+  const customDayCost = costPerHour * hoursDaily;
+  const customMonthCost = customDayCost * 30.0;
+  const customYearCost = customDayCost * 365.0;
+
+  document.getElementById('calc-custom-day').textContent = `${customDayCost.toFixed(2).replace('.', ',')} €`;
+  document.getElementById('calc-custom-month').textContent = `${customMonthCost.toFixed(2).replace('.', ',')} €`;
+  document.getElementById('calc-custom-year').textContent = `${customYearCost.toFixed(2).replace('.', ',')} €`;
+}
+
+// Timer Modal
 function openTimerModal(deviceId, deviceName) {
   activeTimerDeviceId = deviceId;
   document.getElementById('timer-modal-dev-name').textContent = deviceName;
@@ -519,32 +707,27 @@ function closeTimerModal() {
 async function applyTimer(minutes) {
   if (!activeTimerDeviceId) return;
 
-  if (isStandaloneMode) {
-    const dev = currentDevices.find(d => d.id === activeTimerDeviceId);
-    if (dev) {
-      dev.timer_seconds_left = minutes * 60;
-      localStorage.setItem('smartwatt_devices', JSON.stringify(currentDevices));
-      closeTimerModal();
-      await updateAll(false);
+  const dev = currentDevices.find(d => d.id === activeTimerDeviceId);
+  if (dev) {
+    dev.timer_seconds_left = minutes * 60;
+    if (isStandaloneMode) {
+      localStorage.setItem('smartwatt_devices_v2', JSON.stringify(currentDevices));
     }
-    return;
+    closeTimerModal();
+    await updateAll(false);
   }
 
-  try {
-    await fetch(`/api/devices/${activeTimerDeviceId}/timer`, {
+  if (!isStandaloneMode) {
+    fetch(`/api/devices/${activeTimerDeviceId}/timer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ minutes })
-    });
-    closeTimerModal();
-    await updateAll(false);
-  } catch (err) {
-    console.error('Failed to set timer:', err);
+    }).catch(e => {});
   }
 }
 
-// Settings Modal Operations
-function openSettingsModal(targetSection = '') {
+// Settings Modal
+function openSettingsModal() {
   document.getElementById('settings-modal').classList.remove('hidden');
   if (window.lucide) lucide.createIcons();
 }
@@ -566,6 +749,8 @@ async function loadSettings() {
 
   const price = parseFloat(currentSettings.kwh_price || '0.34');
   document.getElementById('header-price-display').textContent = `${price.toFixed(2).replace('.', ',')} €/kWh`;
+  document.getElementById('quick-price-slider').value = price.toFixed(2);
+  document.getElementById('quick-price-label').textContent = `${price.toFixed(2).replace('.', ',')} €`;
   document.getElementById('setting-kwh-price').value = price;
   document.getElementById('setting-standby-th').value = currentSettings.standby_threshold_w || '12.0';
   document.getElementById('setting-overload-th').value = currentSettings.overload_threshold_w || '2500';
@@ -627,16 +812,16 @@ function switchChartTab(tab) {
   });
 
   if (tab === 'power') updatePowerChart();
-  if (tab === 'distribution') updateDistributionChart();
+  if (tab === 'distribution') updateDistributionChart(true);
   if (tab === 'weekly') updateWeeklyChart();
 }
 
 async function initCharts() {
   Chart.defaults.color = '#94a3b8';
   Chart.defaults.font.family = "'JetBrains Mono', 'Plus Jakarta Sans', monospace";
-  await updatePowerChart();
-  await updateDistributionChart();
-  await updateWeeklyChart();
+  updatePowerChart();
+  updateDistributionChart(true);
+  updateWeeklyChart();
 }
 
 function updatePowerChart() {
@@ -647,10 +832,10 @@ function updatePowerChart() {
   const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6'];
 
   const datasets = currentDevices.map((d, i) => {
-    const p = d.power_w;
+    const p = d.is_on ? d.power_w : 0;
     return {
       label: d.name,
-      data: [p * 0.1, p * 0.1, p * 0.4, p * 0.7, p * 0.85, p * 0.6, p * 0.95, p * 1.1, p],
+      data: [p * 0.1, p * 0.15, p * 0.4, p * 0.7, p * 0.85, p * 0.6, p * 0.95, p * 1.05, p],
       borderColor: colors[i % colors.length],
       backgroundColor: colors[i % colors.length] + '20',
       fill: true,
@@ -675,46 +860,55 @@ function updatePowerChart() {
   });
 }
 
-function updateDistributionChart() {
+function updateDistributionChart(rebuild = true) {
   const labels = currentDevices.map(d => d.name);
-  const dataValues = currentDevices.map(d => d.energy_today_kwh);
+  const dataValues = currentDevices.map(d => d.is_on ? (d.power_w || 0) : 0);
   const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'];
 
   const ctx = document.getElementById('canvas-distribution').getContext('2d');
-  if (distributionChartInstance) distributionChartInstance.destroy();
+  if (rebuild || !distributionChartInstance) {
+    if (distributionChartInstance) distributionChartInstance.destroy();
 
-  distributionChartInstance = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: labels,
-      datasets: [{
-        data: dataValues,
-        backgroundColor: colors.slice(0, labels.length),
-        borderWidth: 2,
-        borderColor: '#0f172a'
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      cutout: '68%'
-    }
-  });
+    distributionChartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: dataValues,
+          backgroundColor: colors.slice(0, labels.length),
+          borderWidth: 2,
+          borderColor: '#0f172a'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        cutout: '68%'
+      }
+    });
+  } else {
+    distributionChartInstance.data.labels = labels;
+    distributionChartInstance.data.datasets[0].data = dataValues;
+    distributionChartInstance.update('none');
+  }
 
+  // Legend
   const legendEl = document.getElementById('distribution-legend');
-  legendEl.innerHTML = currentDevices.map((d, i) => `
-    <div class="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800">
-      <div class="flex items-center gap-2">
-        <span class="w-3 h-3 rounded-full" style="background-color: ${colors[i % colors.length]}"></span>
-        <span class="text-slate-200 font-semibold truncate max-w-[150px]">${d.name}</span>
+  if (legendEl) {
+    legendEl.innerHTML = currentDevices.map((d, i) => `
+      <div class="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full" style="background-color: ${colors[i % colors.length]}"></span>
+          <span class="text-slate-200 font-semibold truncate max-w-[150px]">${d.name}</span>
+        </div>
+        <div class="text-right font-mono">
+          <span class="text-white font-bold">${(d.energy_today_kwh || 0).toFixed(2).replace('.', ',')} kWh</span>
+          <span class="text-slate-400 text-[10px] block">~${((d.energy_today_kwh || 0) * parseFloat(currentSettings.kwh_price || '0.34')).toFixed(2).replace('.', ',')} €</span>
+        </div>
       </div>
-      <div class="text-right font-mono">
-        <span class="text-white font-bold">${d.energy_today_kwh.toFixed(2).replace('.', ',')} kWh</span>
-        <span class="text-slate-400 text-[10px] block">~${(d.energy_today_kwh * parseFloat(currentSettings.kwh_price || '0.34')).toFixed(2).replace('.', ',')} €</span>
-      </div>
-    </div>
-  `).join('');
+    `).join('');
+  }
 }
 
 function updateWeeklyChart() {
