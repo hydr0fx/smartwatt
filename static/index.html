@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SmartWatt">
 
-  <!-- Tailwind CSS & Icons & Chart.js -->
+  <!-- Tailwind CSS, Chart.js & Lucide Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -23,6 +23,9 @@
       darkMode: 'class',
       theme: {
         extend: {
+          screens: {
+            'xs': '400px'
+          },
           colors: {
             ios: {
               green: '#34C759',
@@ -38,52 +41,51 @@
     }
   </script>
 </head>
-<body class="selection:bg-emerald-500 selection:text-white pb-32">
+<body class="selection:bg-emerald-500 selection:text-white">
 
   <!-- TOP APPLE-STYLE NAVIGATION BAR -->
-  <header class="sticky top-0 z-40 liquid-glass-nav px-4 lg:px-8 py-3.5 transition-all">
-    <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
+  <header class="sticky top-0 z-40 liquid-glass-nav px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 transition-all">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
       
       <!-- Smart Life Home Selector & Title -->
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-400 to-cyan-400 flex items-center justify-center shadow-lg shadow-emerald-500/25 text-white font-bold shrink-0">
-          <i data-lucide="zap" class="w-5 h-5 fill-current"></i>
+      <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-400 to-cyan-400 flex items-center justify-center shadow-lg shadow-emerald-500/25 text-white font-bold shrink-0">
+          <i data-lucide="zap" class="w-4 h-4 sm:w-5 sm:h-5 fill-current"></i>
         </div>
-        <div>
-          <div class="flex items-center gap-1.5 cursor-pointer group" onclick="toggleQuickPriceBar()" title="Status ansehen">
-            <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-1">
-              <span>Mein Zuhause</span>
-              <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-hover:text-emerald-400 transition-colors"></i>
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5 cursor-pointer group" onclick="toggleQuickPriceBar()" title="Status & Tarif öffnen">
+            <h1 class="text-sm sm:text-lg font-extrabold tracking-tight text-white flex items-center gap-1 truncate">
+              <span>SmartWatt</span>
             </h1>
-            <span id="mode-badge" class="ml-1 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-              Demo Modus
+            <span id="mode-badge" class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shrink-0">
+              Demo
             </span>
           </div>
-          <p class="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span id="header-sub-status">4 Steckdosen online • Smart Life Engine</span>
+          <p class="text-[10px] sm:text-[11px] text-slate-400 font-medium flex items-center gap-1.5 truncate">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+            <span id="header-sub-status">4 Steckdosen live</span>
           </p>
         </div>
       </div>
 
       <!-- Quick Actions (Liquid Glass Pills) -->
-      <div class="flex items-center gap-2 sm:gap-2.5">
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
         
         <!-- Editable Strompreis Pill -->
-        <button onclick="toggleQuickPriceBar()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full liquid-glass hover:bg-white/10 text-xs sm:text-sm font-semibold transition cursor-pointer" title="Strompreis anpassen">
-          <span class="text-slate-400 hidden xs:inline font-normal">Tarif:</span>
-          <span id="header-price-display" class="text-emerald-400 font-bold font-mono">0,34 €/kWh</span>
+        <button onclick="toggleQuickPriceBar()" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full liquid-glass hover:bg-white/10 text-xs sm:text-sm font-semibold transition cursor-pointer" title="Strompreis anpassen">
+          <span class="text-slate-400 hidden md:inline font-normal text-xs">Tarif:</span>
+          <span id="header-price-display" class="text-emerald-400 font-bold font-mono text-xs sm:text-sm">0,34 €/kWh</span>
           <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-slate-400"></i>
         </button>
 
-        <!-- Master Switch ("Alle schalten") -->
-        <button id="btn-master-toggle" onclick="toggleAllDevices()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full liquid-glass hover:bg-white/10 text-xs font-semibold text-slate-200 transition" title="Alle Steckdosen gleichzeitig umschalten">
-          <i data-lucide="power" class="w-3.5 h-3.5 text-emerald-400"></i>
-          <span class="hidden sm:inline">Alle schalten</span>
+        <!-- Prominent Tuya Connect Button in Header -->
+        <button onclick="openSettingsModal('tuya')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold transition shadow-md shadow-emerald-500/20 active:scale-95 cursor-pointer" title="Echte Smart Life Steckdosen koppeln">
+          <i data-lucide="plug" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Tuya koppeln</span>
         </button>
 
         <!-- Settings Button -->
-        <button onclick="openSettingsModal()" class="w-9 h-9 rounded-full liquid-glass hover:bg-white/10 flex items-center justify-center text-slate-300 hover:text-white transition shrink-0" title="Einstellungen & Tuya">
+        <button onclick="openSettingsModal()" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full liquid-glass hover:bg-white/10 flex items-center justify-center text-slate-300 hover:text-white transition shrink-0 cursor-pointer" title="Einstellungen">
           <i data-lucide="settings" class="w-4 h-4"></i>
         </button>
 
@@ -92,13 +94,13 @@
 
     <!-- QUICK TARIFF SLIDER (Liquid Glass Dropdown) -->
     <div id="quick-price-bar" class="hidden max-w-7xl mx-auto pt-3 mt-3 border-t border-white/10">
-      <div class="p-4 rounded-2xl liquid-glass flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xl">
+      <div class="p-3 sm:p-4 rounded-2xl liquid-glass flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xl">
         <div class="flex items-center gap-3 w-full sm:w-auto">
           <span class="text-xs font-bold text-slate-200 uppercase tracking-wider shrink-0 flex items-center gap-1.5">
             <i data-lucide="euro" class="w-4 h-4 text-emerald-400"></i>
-            <span>Strompreis live anpassen:</span>
+            <span>Strompreis live:</span>
           </span>
-          <div class="flex items-center gap-2.5 flex-grow sm:flex-grow-0">
+          <div class="flex items-center gap-2.5 flex-grow sm:flex-grow-0 w-full sm:w-auto">
             <input type="range" id="quick-price-slider" min="0.10" max="0.80" step="0.01" value="0.34" 
               oninput="onQuickPriceChange(this.value)"
               class="w-full sm:w-48 accent-emerald-400 cursor-pointer">
@@ -107,169 +109,196 @@
         </div>
 
         <!-- Presets -->
-        <div class="flex items-center gap-1.5 text-xs w-full sm:w-auto justify-end">
-          <span class="text-slate-400 text-[11px] mr-1">Schnellwahl:</span>
-          <button onclick="onQuickPriceChange('0.28')" class="px-2.5 py-1 rounded-full liquid-glass hover:bg-white/10 text-slate-300 font-mono text-[11px]">28ct</button>
-          <button onclick="onQuickPriceChange('0.32')" class="px-2.5 py-1 rounded-full liquid-glass hover:bg-white/10 text-slate-300 font-mono text-[11px]">32ct</button>
-          <button onclick="onQuickPriceChange('0.34')" class="px-2.5 py-1 rounded-full bg-emerald-500/25 border border-emerald-400/40 text-emerald-300 font-mono text-[11px] font-bold">34ct</button>
-          <button onclick="onQuickPriceChange('0.38')" class="px-2.5 py-1 rounded-full liquid-glass hover:bg-white/10 text-slate-300 font-mono text-[11px]">38ct</button>
-          <button onclick="onQuickPriceChange('0.42')" class="px-2.5 py-1 rounded-full liquid-glass hover:bg-white/10 text-slate-300 font-mono text-[11px]">42ct</button>
+        <div class="flex items-center gap-1.5 text-xs w-full sm:w-auto justify-end flex-wrap">
+          <span class="text-slate-400 text-[11px] mr-1 hidden xs:inline">Schnellwahl:</span>
+          <button onclick="onQuickPriceChange('0.28')" class="px-2.5 py-1 rounded-full liquid-glass hover:bg-white/10 text-slate-300 font-mono text-[11px] cursor-pointer">28ct</button>
+          <button onclick="onQuickPriceChange('0.30')" class="px-2.5 py-1 rounded-full liquid-glass hover:bg-white/10 text-slate-300 font-mono text-[11px] cursor-pointer">30ct</button>
+          <button onclick="onQuickPriceChange('0.32')" class="px-2.5 py-1 rounded-full liquid-glass hover:bg-white/10 text-slate-300 font-mono text-[11px] cursor-pointer">32ct</button>
+          <button onclick="onQuickPriceChange('0.34')" class="px-2.5 py-1 rounded-full bg-emerald-500/25 border border-emerald-400/40 text-emerald-300 font-mono text-[11px] font-bold cursor-pointer">34ct</button>
+          <button onclick="onQuickPriceChange('0.38')" class="px-2.5 py-1 rounded-full liquid-glass hover:bg-white/10 text-slate-300 font-mono text-[11px] cursor-pointer">38ct</button>
+          <button onclick="onQuickPriceChange('0.42')" class="px-2.5 py-1 rounded-full liquid-glass hover:bg-white/10 text-slate-300 font-mono text-[11px] cursor-pointer">42ct</button>
         </div>
       </div>
     </div>
   </header>
 
   <!-- MAIN WRAPPER -->
-  <main class="max-w-7xl mx-auto px-4 lg:px-8 pt-5 space-y-6">
+  <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-3 sm:pt-4 space-y-4 sm:space-y-5">
 
-    <!-- SMART LIFE ROOM / CATEGORY SEGMENTED TABS -->
-    <div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-      <button onclick="filterRoom('all')" id="room-tab-all" class="room-tab px-4 py-2 rounded-full text-xs font-bold transition-all bg-emerald-500/25 text-emerald-300 border border-emerald-400/40 shadow-sm shrink-0">
-        Alle Dosen (4)
-      </button>
-      <button onclick="filterRoom('entertainment')" id="room-tab-entertainment" class="room-tab px-4 py-2 rounded-full text-xs font-semibold transition-all liquid-glass text-slate-400 hover:text-white shrink-0">
-        🎮 Gaming & TV
-      </button>
-      <button onclick="filterRoom('kitchen')" id="room-tab-kitchen" class="room-tab px-4 py-2 rounded-full text-xs font-semibold transition-all liquid-glass text-slate-400 hover:text-white shrink-0">
-        🍳 Küche
-      </button>
-      <button onclick="filterRoom('utility')" id="room-tab-utility" class="room-tab px-4 py-2 rounded-full text-xs font-semibold transition-all liquid-glass text-slate-400 hover:text-white shrink-0">
-        🧺 Bad & Haustechnik
-      </button>
-    </div>
-
-    <!-- HERO ENERGY BANNER (Apple Health & Fitness Ring Inspired) -->
-    <section class="liquid-glass p-5 sm:p-7 relative overflow-hidden">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+    <!-- HERO ENERGY BANNER (Apple Inspired Liquid Glass Gauge) -->
+    <section class="liquid-glass p-3.5 sm:p-6 relative overflow-hidden">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-5 items-center">
         
         <!-- Big Watt Meter Gauge -->
-        <div class="lg:col-span-5 flex items-center gap-5">
-          <div class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full flex items-center justify-center shrink-0 border border-white/15 bg-slate-900/40 shadow-inner">
-            <div id="kpi-live-ring" class="absolute inset-0 rounded-full border-4 border-emerald-400/40 border-t-emerald-400 animate-spin" style="animation-duration: 8s;"></div>
+        <div class="md:col-span-5 flex items-center gap-3.5 sm:gap-4">
+          <div class="relative w-16 h-16 sm:w-24 sm:h-24 rounded-full flex items-center justify-center shrink-0 border border-white/15 bg-slate-900/40 shadow-inner">
+            <div id="kpi-live-ring" class="absolute inset-0 rounded-full border-4 border-emerald-400/30 border-t-emerald-400 animate-spin" style="animation-duration: 8s;"></div>
             <div class="text-center z-10">
-              <span id="kpi-live-dot" class="inline-block w-2 h-2 rounded-full bg-emerald-400 mb-1 pulse-dot"></span>
-              <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Live</div>
-              <div id="kpi-active-count" class="text-lg font-black font-mono text-white">0</div>
+              <span id="kpi-live-dot" class="inline-block w-2 h-2 rounded-full bg-emerald-400 mb-0.5 pulse-dot"></span>
+              <div class="text-[8px] sm:text-[9px] uppercase font-bold text-slate-400 tracking-wider">Aktiv</div>
+              <div id="kpi-active-count" class="text-sm sm:text-base font-black font-mono text-white">4</div>
             </div>
           </div>
 
           <div>
-            <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Momentane Gesamtlast</div>
-            <div class="flex items-baseline gap-2">
-              <span id="kpi-total-power" class="text-4xl sm:text-5xl font-black font-mono tracking-tight text-white glow-emerald">0</span>
-              <span class="text-xl font-bold text-slate-400">Watt</span>
+            <div class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Momentan-Last</div>
+            <div class="flex items-baseline gap-1 sm:gap-1.5">
+              <span id="kpi-total-power" class="text-2xl sm:text-5xl font-black font-mono tracking-tight text-white glow-emerald">0</span>
+              <span class="text-sm sm:text-lg font-bold text-slate-400">Watt</span>
             </div>
-            <p id="kpi-active-devices-detail" class="text-xs text-emerald-400 font-semibold mt-1 flex items-center gap-1.5">
+            <p id="kpi-active-devices-detail" class="text-[11px] sm:text-xs text-emerald-400 font-semibold mt-0.5 flex items-center gap-1.5">
               <i data-lucide="zap" class="w-3.5 h-3.5"></i>
-              <span>Alle Systeme aktiv</span>
+              <span>Live synchronisiert</span>
             </p>
           </div>
         </div>
 
         <!-- Real-Time Burn Rate Cards -->
-        <div class="lg:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+        <div class="md:col-span-7 grid grid-cols-3 gap-1.5 sm:gap-3 text-xs">
           
-          <div class="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 shadow-sm flex flex-col justify-between">
-            <span class="text-[11px] text-slate-400 font-medium">Laufende Kostenrate</span>
-            <div class="my-1.5">
-              <span id="kpi-burn-rate-h" class="text-2xl font-black font-mono text-amber-400 glow-amber">0,000</span>
-              <span class="text-xs font-bold text-slate-400"> €/h</span>
+          <div class="p-2 sm:p-3 rounded-2xl bg-white/[0.03] border border-white/10 shadow-sm flex flex-col justify-between">
+            <span class="text-[9px] sm:text-[10px] text-slate-400 font-medium uppercase truncate">Kostenrate</span>
+            <div class="my-1">
+              <span id="kpi-burn-rate-h" class="text-base sm:text-2xl font-black font-mono text-amber-400 glow-amber">0,000</span>
+              <span class="text-[9px] sm:text-[10px] font-bold text-slate-400"> €/h</span>
             </div>
-            <span class="text-[10px] text-slate-400">pro Betriebsstunde</span>
+            <span class="text-[9px] sm:text-[10px] text-slate-400">pro Stunde</span>
           </div>
 
-          <div class="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 shadow-sm flex flex-col justify-between">
-            <span class="text-[11px] text-slate-400 font-medium">24h Hochrechnung</span>
-            <div class="my-1.5">
-              <span id="kpi-cost-day" class="text-2xl font-black font-mono text-white">0,00</span>
-              <span class="text-xs font-bold text-slate-400"> €/Tag</span>
+          <div class="p-2 sm:p-3 rounded-2xl bg-white/[0.03] border border-white/10 shadow-sm flex flex-col justify-between">
+            <span class="text-[9px] sm:text-[10px] text-slate-400 font-medium uppercase truncate">24h Tag</span>
+            <div class="my-1">
+              <span id="kpi-cost-day" class="text-base sm:text-2xl font-black font-mono text-white">0,00</span>
+              <span class="text-[9px] sm:text-[10px] font-bold text-slate-400"> €</span>
             </div>
-            <span id="kpi-cost-month" class="text-[10px] text-slate-400 font-mono">Monat: 0,00 €</span>
+            <span id="kpi-cost-month" class="text-[9px] sm:text-[10px] text-slate-400 font-mono truncate">Monat: 0,00 €</span>
           </div>
 
-          <div class="col-span-2 sm:col-span-1 p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 shadow-sm flex flex-col justify-between">
-            <span class="text-[11px] text-slate-400 font-medium">Kosten Heute (Bisher)</span>
-            <div class="my-1.5">
-              <span id="kpi-cost-today" class="text-2xl font-black font-mono text-emerald-400 glow-emerald">0,00</span>
-              <span class="text-xs font-bold text-slate-400"> €</span>
+          <div class="p-2 sm:p-3 rounded-2xl bg-white/[0.03] border border-white/10 shadow-sm flex flex-col justify-between">
+            <span class="text-[9px] sm:text-[10px] text-slate-400 font-medium uppercase truncate">Heute</span>
+            <div class="my-1">
+              <span id="kpi-cost-today" class="text-base sm:text-2xl font-black font-mono text-emerald-400 glow-emerald">0,00</span>
+              <span class="text-[9px] sm:text-[10px] font-bold text-slate-400"> €</span>
             </div>
-            <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
-              <span id="kpi-kwh-today">0,00 kWh</span>
-              <span id="kpi-co2-today" class="text-blue-400">~0 kg CO₂</span>
-            </div>
+            <span id="kpi-kwh-today" class="text-[9px] sm:text-[10px] text-slate-400 font-mono truncate">0,00 kWh</span>
           </div>
 
         </div>
 
       </div>
 
-      <!-- Standby Vampire Bar inside Hero -->
-      <div id="hero-vampire-alert" class="mt-4 pt-3.5 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+      <!-- Standby Vampire Alert Bar -->
+      <div id="hero-vampire-alert" class="mt-3 sm:mt-3.5 pt-2.5 sm:pt-3 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
         <div class="flex items-center gap-2 text-rose-300">
-          <div class="p-1.5 rounded-lg bg-rose-500/20 text-rose-400">
-            <i data-lucide="shield-alert" class="w-4 h-4"></i>
+          <div class="p-1 rounded-lg bg-rose-500/20 text-rose-400">
+            <i data-lucide="shield-alert" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
           </div>
-          <span><strong>Standby-Killer Alarm:</strong> <span id="kpi-vampire-count">1</span> Gerät zieht unnötigen Leerlaufstrom</span>
+          <span class="text-[11px] sm:text-xs"><strong>Standby-Killer Alarm:</strong> <span id="kpi-vampire-count">1</span> Gerät zieht unnötigen Leerlaufstrom</span>
         </div>
-        <div class="flex items-center gap-3">
-          <span class="text-rose-400 font-mono font-bold" id="kpi-vampire-savings">~20,25 € / Jahr verschwendet</span>
-          <button onclick="turnOffStandbyDevices()" class="px-2.5 py-1 rounded-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/30 text-[11px] font-bold transition">
+        <div class="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
+          <span class="text-rose-400 font-mono font-bold text-[11px] sm:text-xs" id="kpi-vampire-savings">~20,25 € / Jahr verschwendet</span>
+          <button onclick="turnOffStandbyDevices()" class="px-3 py-1 rounded-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/30 text-xs font-bold transition cursor-pointer">
             Standby beenden
           </button>
         </div>
       </div>
     </section>
 
-    <!-- DEVICE TILES GRID (Liquid Cards) -->
-    <section>
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="text-base font-bold text-white flex items-center gap-2">
-          <i data-lucide="layout-grid" class="w-4 h-4 text-emerald-400"></i>
-          <span>Steckdosen-Kacheln</span>
-        </h2>
-        <span class="text-xs text-slate-400" id="device-filter-label">Alle 4 Dosen angezeigt</span>
+    <!-- PROMINENT SMART LIFE CONNECTION & CONTROL BAR -->
+    <div class="p-3.5 sm:p-4 rounded-2xl liquid-glass flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border border-emerald-500/40 bg-gradient-to-r from-emerald-950/40 via-teal-950/20 to-slate-900/60 shadow-lg shadow-emerald-950/30">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-slate-950 font-bold shadow-md shadow-emerald-500/30 shrink-0">
+          <i data-lucide="plug-2" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="text-sm sm:text-base font-bold text-white">Echte Smart Life Steckdosen verbinden</h3>
+            <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 uppercase tracking-wider font-mono">Tuya Cloud API</span>
+          </div>
+          <p class="text-[11px] sm:text-xs text-slate-300 mt-0.5">Greife Live-Wattwerte deiner echten Steckdosen ab – während du Smart Life ganz normal weiterbenutzt.</p>
+        </div>
       </div>
 
-      <div id="devices-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div class="flex items-center gap-2 shrink-0 pt-1 sm:pt-0">
+        <button onclick="openSettingsModal('tuya')" class="flex-1 sm:flex-none px-4 py-2.5 rounded-full bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-xs font-extrabold transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-95 cursor-pointer">
+          <i data-lucide="link" class="w-4 h-4"></i>
+          <span>Steckdosen koppeln</span>
+        </button>
+        <button onclick="openAddDeviceModal()" class="px-3.5 py-2.5 rounded-full liquid-glass hover:bg-white/10 text-slate-200 text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Neue Dose</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- SMART LIFE ROOM / CATEGORY SEGMENTED TABS -->
+    <div class="space-y-2">
+      <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+        <span class="font-bold uppercase tracking-wider text-[10px]">Räume & Kategorien:</span>
+        <button onclick="toggleAllDevices()" class="text-emerald-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer">
+          <i data-lucide="power" class="w-3.5 h-3.5"></i>
+          <span>Alle Steckdosen umschalten</span>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+        <button onclick="filterRoom('all')" id="room-tab-all" class="room-tab px-4 py-2 rounded-full text-xs font-bold transition-all bg-emerald-500/25 text-emerald-300 border border-emerald-400/40 shadow-sm shrink-0 cursor-pointer">
+          Alle (4)
+        </button>
+        <button onclick="filterRoom('entertainment')" id="room-tab-entertainment" class="room-tab px-4 py-2 rounded-full text-xs font-semibold transition-all liquid-glass text-slate-400 hover:text-white shrink-0 cursor-pointer">
+          🎮 Gaming & TV
+        </button>
+        <button onclick="filterRoom('kitchen')" id="room-tab-kitchen" class="room-tab px-4 py-2 rounded-full text-xs font-semibold transition-all liquid-glass text-slate-400 hover:text-white shrink-0 cursor-pointer">
+          🍳 Küche
+        </button>
+        <button onclick="filterRoom('utility')" id="room-tab-utility" class="room-tab px-4 py-2 rounded-full text-xs font-semibold transition-all liquid-glass text-slate-400 hover:text-white shrink-0 cursor-pointer">
+          🧺 Bad & Technik
+        </button>
+      </div>
+    </div>
+
+    <!-- DEVICE TILES GRID (Liquid Cards) -->
+    <section>
+      <div id="devices-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-3.5 sm:gap-4">
         <!-- Rendered dynamically by app.js -->
       </div>
     </section>
 
     <!-- CHARTS & DETAILED INSIGHTS SECTION -->
-    <section class="liquid-glass p-5 sm:p-6 space-y-4">
+    <section id="section-charts" class="liquid-glass p-3.5 sm:p-6 space-y-4">
       
       <!-- Chart Header with Segmented Tabs -->
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-white/10 pb-3">
         <div>
           <h3 class="text-base font-bold text-white flex items-center gap-2">
             <i data-lucide="line-chart" class="w-4 h-4 text-emerald-400"></i>
-            <span>Energie- & Kostenanalysen</span>
+            <span>Energie- & Verbrauchsanalysen</span>
           </h3>
-          <p class="text-xs text-slate-400">Historische Lastkurven und Verbrauchsanteile</p>
+          <p class="text-xs text-slate-400">24-Stunden Verlauf, prozentuale Stromfresser und 7-Tage Historie</p>
         </div>
 
         <!-- Segmented Controls -->
-        <div class="flex items-center p-1 rounded-full liquid-glass text-xs font-semibold">
-          <button id="tab-btn-power" onclick="switchChartTab('power')" class="px-3.5 py-1.5 rounded-full transition bg-emerald-500 text-slate-950 font-bold shadow-md">
+        <div class="flex items-center p-1 rounded-full liquid-glass text-xs font-semibold w-full sm:w-auto overflow-x-auto">
+          <button id="tab-btn-power" onclick="switchChartTab('power')" class="flex-1 sm:flex-none px-3.5 py-1.5 rounded-full transition bg-emerald-500 text-slate-950 font-bold shadow-md cursor-pointer">
             24h Lastkurve
           </button>
-          <button id="tab-btn-distribution" onclick="switchChartTab('distribution')" class="px-3.5 py-1.5 rounded-full transition text-slate-400 hover:text-white">
+          <button id="tab-btn-distribution" onclick="switchChartTab('distribution')" class="flex-1 sm:flex-none px-3.5 py-1.5 rounded-full transition text-slate-400 hover:text-white cursor-pointer">
             Verteilung
           </button>
-          <button id="tab-btn-weekly" onclick="switchChartTab('weekly')" class="px-3.5 py-1.5 rounded-full transition text-slate-400 hover:text-white">
-            Woche (€)
+          <button id="tab-btn-weekly" onclick="switchChartTab('weekly')" class="flex-1 sm:flex-none px-3.5 py-1.5 rounded-full transition text-slate-400 hover:text-white cursor-pointer">
+            7-Tage (€)
           </button>
         </div>
       </div>
 
       <!-- Chart View 1: 24h Power Timeline -->
-      <div id="chart-view-power" class="w-full h-72 sm:h-80">
+      <div id="chart-view-power" class="w-full h-72 sm:h-80 relative">
         <canvas id="canvas-power-history"></canvas>
       </div>
 
       <!-- Chart View 2: Doughnut Distribution -->
-      <div id="chart-view-distribution" class="w-full h-72 sm:h-80 hidden flex flex-col md:flex-row items-center justify-around gap-4">
-        <div class="h-64 w-64">
+      <div id="chart-view-distribution" class="w-full min-h-[300px] hidden flex-col md:flex-row items-center justify-around gap-5 py-2">
+        <div class="h-56 w-56 sm:h-64 sm:w-64 shrink-0 relative">
           <canvas id="canvas-distribution"></canvas>
         </div>
         <div id="distribution-legend" class="text-xs space-y-2 w-full md:w-1/2 max-w-sm">
@@ -278,7 +307,7 @@
       </div>
 
       <!-- Chart View 3: Weekly Bar Chart -->
-      <div id="chart-view-weekly" class="w-full h-72 sm:h-80 hidden">
+      <div id="chart-view-weekly" class="w-full h-72 sm:h-80 relative hidden">
         <canvas id="canvas-weekly"></canvas>
       </div>
 
@@ -287,28 +316,28 @@
   </main>
 
   <!-- FLOATING LIQUID GLASS DOCK (Apple iOS Inspired Bottom Bar) -->
-  <nav class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 px-3 py-2 floating-dock flex items-center gap-1.5 sm:gap-3 text-xs font-semibold shadow-2xl">
-    <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+  <nav class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 px-2 sm:px-3 py-2 floating-dock flex items-center gap-1 sm:gap-2 text-xs font-semibold shadow-2xl">
+    <button id="dock-btn-dosen" onclick="navigateTo('dosen')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-400/35 transition cursor-pointer">
       <i data-lucide="zap" class="w-4 h-4"></i>
       <span>Dosen</span>
     </button>
-    <button onclick="document.querySelector('section.liquid-glass:last-of-type').scrollIntoView({behavior: 'smooth'})" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition">
+    <button id="dock-btn-analysen" onclick="navigateTo('analysen')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer">
       <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
       <span>Analysen</span>
     </button>
-    <button onclick="toggleQuickPriceBar()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition">
+    <button id="dock-btn-tarif" onclick="navigateTo('tarif')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer">
       <i data-lucide="euro" class="w-4 h-4"></i>
       <span>Tarif</span>
     </button>
-    <button onclick="openSettingsModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition">
-      <i data-lucide="cloud" class="w-4 h-4"></i>
+    <button id="dock-btn-tuya" onclick="navigateTo('tuya')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer">
+      <i data-lucide="plug" class="w-4 h-4"></i>
       <span>Tuya</span>
     </button>
   </nav>
 
   <!-- LIQUID GLASS ZEITRAUM-KOSTENRECHNER MODAL -->
-  <div id="calc-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md hidden overflow-y-auto">
-    <div class="liquid-glass w-full max-w-lg p-6 space-y-5 shadow-2xl my-6 border border-white/20">
+  <div id="calc-modal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md hidden overflow-y-auto">
+    <div class="liquid-glass w-full max-w-lg p-4 sm:p-6 space-y-4 shadow-2xl my-auto max-h-[92vh] overflow-y-auto border border-white/20">
       
       <!-- Header -->
       <div class="flex justify-between items-center border-b border-white/10 pb-3">
@@ -321,13 +350,13 @@
             <p id="calc-modal-dev-name" class="text-xs text-slate-400 font-semibold">Steckdose</p>
           </div>
         </div>
-        <button onclick="closeCalcModal()" class="w-8 h-8 rounded-full liquid-glass hover:bg-white/15 flex items-center justify-center text-slate-400 hover:text-white transition">
+        <button onclick="closeCalcModal()" class="w-8 h-8 rounded-full liquid-glass hover:bg-white/15 flex items-center justify-center text-slate-400 hover:text-white transition cursor-pointer">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
       <!-- Dynamic Inputs in Calculator -->
-      <div class="grid grid-cols-2 gap-3 p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
+      <div class="grid grid-cols-2 gap-3 p-3 rounded-2xl bg-white/[0.03] border border-white/10">
         <div>
           <label class="block text-[11px] text-slate-400 uppercase font-semibold mb-1">Leistung (Watt):</label>
           <div class="relative">
@@ -397,7 +426,7 @@
       </div>
 
       <!-- Custom Daily Usage Slider -->
-      <div class="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-teal-950/20 to-slate-900 border border-emerald-400/25 space-y-2">
+      <div class="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-teal-950/20 to-slate-900 border border-emerald-400/25 space-y-2">
         <div class="flex justify-between items-center text-xs">
           <span class="font-bold text-slate-300">Tägliche Nutzungsdauer:</span>
           <span id="calc-slider-hours-label" class="font-bold font-mono text-emerald-400">4,0 Stunden / Tag</span>
@@ -423,8 +452,8 @@
       </div>
 
       <!-- Footer -->
-      <div class="flex justify-end pt-2">
-        <button onclick="closeCalcModal()" class="px-5 py-2 rounded-full liquid-glass hover:bg-white/15 text-slate-300 text-xs font-semibold transition">
+      <div class="flex justify-end pt-1">
+        <button onclick="closeCalcModal()" class="px-5 py-2 rounded-full liquid-glass hover:bg-white/15 text-slate-300 text-xs font-semibold transition cursor-pointer">
           Schließen
         </button>
       </div>
@@ -433,8 +462,8 @@
   </div>
 
   <!-- LIQUID GLASS TIMER MODAL -->
-  <div id="timer-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md hidden">
-    <div class="liquid-glass w-full max-w-md p-6 space-y-5 shadow-2xl border border-white/20">
+  <div id="timer-modal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md hidden">
+    <div class="liquid-glass w-full max-w-md p-5 sm:p-6 space-y-5 shadow-2xl border border-white/20">
       <div class="flex justify-between items-center">
         <div class="flex items-center gap-2.5 text-emerald-400">
           <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center">
@@ -442,7 +471,7 @@
           </div>
           <h3 class="text-base font-bold text-white">Abschalt-Timer</h3>
         </div>
-        <button onclick="closeTimerModal()" class="w-8 h-8 rounded-full liquid-glass hover:bg-white/15 flex items-center justify-center text-slate-400 hover:text-white transition">
+        <button onclick="closeTimerModal()" class="w-8 h-8 rounded-full liquid-glass hover:bg-white/15 flex items-center justify-center text-slate-400 hover:text-white transition cursor-pointer">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
@@ -451,130 +480,215 @@
         Wähle, nach welcher Zeit die Steckdose <strong id="timer-modal-dev-name" class="text-emerald-400"></strong> automatisch ausgeschaltet werden soll:
       </p>
 
-      <div class="grid grid-cols-3 gap-2.5">
-        <button onclick="applyTimer(15)" class="py-2.5 rounded-2xl liquid-glass hover:bg-white/15 text-slate-200 font-semibold text-xs transition">15 Minuten</button>
-        <button onclick="applyTimer(30)" class="py-2.5 rounded-2xl liquid-glass hover:bg-white/15 text-slate-200 font-semibold text-xs transition">30 Minuten</button>
-        <button onclick="applyTimer(45)" class="py-2.5 rounded-xl liquid-glass hover:bg-white/15 text-slate-200 font-semibold text-xs transition">45 Minuten</button>
-        <button onclick="applyTimer(60)" class="py-2.5 rounded-2xl liquid-glass hover:bg-white/15 text-slate-200 font-semibold text-xs transition">1 Stunde</button>
-        <button onclick="applyTimer(120)" class="py-2.5 rounded-2xl liquid-glass hover:bg-white/15 text-slate-200 font-semibold text-xs transition">2 Stunden</button>
-        <button onclick="applyTimer(240)" class="py-2.5 rounded-2xl liquid-glass hover:bg-white/15 text-slate-200 font-semibold text-xs transition">4 Stunden</button>
+      <div class="grid grid-cols-3 gap-2">
+        <button onclick="applyTimer(15)" class="py-2.5 rounded-2xl liquid-glass hover:bg-white/15 text-slate-200 font-semibold text-xs transition cursor-pointer">15 Min</button>
+        <button onclick="applyTimer(30)" class="py-2.5 rounded-2xl liquid-glass hover:bg-white/15 text-slate-200 font-semibold text-xs transition cursor-pointer">30 Min</button>
+        <button onclick="applyTimer(45)" class="py-2.5 rounded-2xl liquid-glass hover:bg-white/15 text-slate-200 font-semibold text-xs transition cursor-pointer">45 Min</button>
+        <button onclick="applyTimer(60)" class="py-2.5 rounded-2xl liquid-glass hover:bg-white/15 text-slate-200 font-semibold text-xs transition cursor-pointer">1 Stunde</button>
+        <button onclick="applyTimer(120)" class="py-2.5 rounded-2xl liquid-glass hover:bg-white/15 text-slate-200 font-semibold text-xs transition cursor-pointer">2 Stunden</button>
+        <button onclick="applyTimer(240)" class="py-2.5 rounded-2xl liquid-glass hover:bg-white/15 text-slate-200 font-semibold text-xs transition cursor-pointer">4 Stunden</button>
       </div>
 
       <div class="pt-2 border-t border-white/10 flex justify-between gap-3">
-        <button onclick="applyTimer(0)" class="px-4 py-2 rounded-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-semibold transition">
+        <button onclick="applyTimer(0)" class="px-4 py-2 rounded-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-semibold transition cursor-pointer">
           Timer abbrechen
         </button>
-        <button onclick="closeTimerModal()" class="px-4 py-2 rounded-full liquid-glass hover:bg-white/15 text-slate-300 text-xs font-semibold transition">
+        <button onclick="closeTimerModal()" class="px-4 py-2 rounded-full liquid-glass hover:bg-white/15 text-slate-300 text-xs font-semibold transition cursor-pointer">
           Schließen
         </button>
       </div>
     </div>
   </div>
 
+  <!-- ADD MANUAL DEVICE MODAL -->
+  <div id="add-device-modal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md hidden overflow-y-auto">
+    <div class="liquid-glass w-full max-w-md p-5 sm:p-6 space-y-4 shadow-2xl my-auto border border-white/20">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
+            <i data-lucide="plus-circle" class="w-5 h-5"></i>
+          </div>
+          <h3 class="text-base font-bold text-white">Neue Steckdose anlegen</h3>
+        </div>
+        <button onclick="closeAddDeviceModal()" class="w-8 h-8 rounded-full liquid-glass hover:bg-white/15 flex items-center justify-center text-slate-400 hover:text-white transition cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1">Name der Steckdose / des Geräts:</label>
+          <input type="text" id="add-dev-name" placeholder="z.B. Kaffeemaschine, Fernseher, PC"
+            class="w-full bg-white/[0.05] border border-white/15 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-emerald-400">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Kategorie / Raum:</label>
+            <select id="add-dev-category" class="w-full bg-slate-900 border border-white/15 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-400">
+              <option value="entertainment">Gaming & TV</option>
+              <option value="kitchen">Küche</option>
+              <option value="utility">Bad & Technik</option>
+              <option value="general">Wohnzimmer</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1">Typische Leistung (W):</label>
+            <input type="number" id="add-dev-power" value="150" min="1" max="3680"
+              class="w-full bg-white/[0.05] border border-white/15 rounded-xl px-3 py-2 text-white font-mono font-bold focus:outline-none focus:border-emerald-400">
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-white/10 pt-3 flex justify-end gap-2.5">
+        <button onclick="closeAddDeviceModal()" class="px-4 py-2 rounded-full liquid-glass hover:bg-white/15 text-slate-300 text-xs font-semibold transition cursor-pointer">
+          Abbrechen
+        </button>
+        <button onclick="submitNewDevice()" class="px-5 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition shadow-lg shadow-emerald-500/20 cursor-pointer">
+          Steckdose hinzufügen
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- LIQUID GLASS SETTINGS & TUYA CONNECT MODAL -->
-  <div id="settings-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md hidden overflow-y-auto">
-    <div class="liquid-glass w-full max-w-xl p-6 space-y-5 shadow-2xl my-8 border border-white/20">
+  <div id="settings-modal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md hidden overflow-y-auto">
+    <div class="liquid-glass w-full max-w-xl p-4 sm:p-6 space-y-4 shadow-2xl my-auto max-h-[92vh] overflow-y-auto border border-white/20">
       
       <!-- Modal Header -->
-      <div class="flex justify-between items-center border-b border-white/10 pb-4">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
             <i data-lucide="sliders" class="w-5 h-5"></i>
           </div>
           <div>
-            <h3 class="text-base font-bold text-white">Einstellungen & Tuya-Anbindung</h3>
-            <p class="text-xs text-slate-400">Stromtarif & Verknüpfung mit deiner Smart Life App</p>
+            <h3 class="text-base font-bold text-white">Smart Life / Tuya Verbindung</h3>
+            <p class="text-xs text-slate-400">Verknüpfe deine echten smarten Steckdosen</p>
           </div>
         </div>
-        <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-full liquid-glass hover:bg-white/15 flex items-center justify-center text-slate-400 hover:text-white transition">
+        <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-full liquid-glass hover:bg-white/15 flex items-center justify-center text-slate-400 hover:text-white transition cursor-pointer">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
       <!-- Settings Content -->
-      <div class="space-y-4 text-sm">
+      <div class="space-y-4 text-xs sm:text-sm">
         
-        <!-- SECTION 1: Strompreis & Schwellenwerte -->
-        <div class="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
-          <h4 class="font-bold text-emerald-400 flex items-center gap-2 text-xs uppercase tracking-wider">
-            <i data-lucide="euro" class="w-4 h-4"></i>
-            <span>1. Dein Stromtarif & Kostenbasis</span>
-          </h4>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs text-slate-300 mb-1">Arbeitspreis (€ pro kWh):</label>
-              <div class="relative">
-                <input id="setting-kwh-price" type="number" step="0.01" min="0.05" max="2.00" value="0.34"
-                  class="w-full bg-white/[0.05] border border-white/15 rounded-xl px-3 py-2 text-white font-mono font-bold focus:outline-none focus:border-emerald-400">
-                <span class="absolute right-3 top-2 text-xs text-slate-400 font-bold">€/kWh</span>
-              </div>
-            </div>
-
-            <div>
-              <label class="block text-xs text-slate-300 mb-1">Standby-Schwelle (Watt):</label>
-              <div class="relative">
-                <input id="setting-standby-th" type="number" step="0.5" min="1" max="50" value="12.0"
-                  class="w-full bg-white/[0.05] border border-white/15 rounded-xl px-3 py-2 text-white font-mono font-bold focus:outline-none focus:border-emerald-400">
-                <span class="absolute right-3 top-2 text-xs text-slate-400 font-bold">W</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- SECTION 2: Tuya / Smart Life Cloud API -->
-        <div class="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
+        <!-- SECTION 1: Tuya Cloud API Connection -->
+        <div class="p-3.5 sm:p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
           <div class="flex justify-between items-center">
             <h4 class="font-bold text-emerald-400 flex items-center gap-2 text-xs uppercase tracking-wider">
               <i data-lucide="cloud" class="w-4 h-4"></i>
-              <span>2. Smart Life / Tuya Cloud API</span>
+              <span>Tuya / Smart Life Cloud API</span>
             </h4>
             
-            <button onclick="toggleSimulationMode()" id="btn-toggle-sim" class="text-xs px-3 py-1 rounded-full liquid-glass hover:bg-white/15 text-slate-300 transition">
-              Modus umschalten
+            <button onclick="toggleSimulationMode()" id="btn-toggle-sim" class="text-xs px-3 py-1 rounded-full liquid-glass hover:bg-white/15 text-slate-300 transition cursor-pointer">
+              Modus wechseln
             </button>
           </div>
 
           <p class="text-xs text-slate-300 leading-relaxed">
-            Deine Steckdosen laufen in <strong>Smart Life</strong> über die globale <strong>Tuya-Plattform</strong>. Beide Apps laufen völlig synchron nebeneinander!
+            Deine Steckdosen laufen in <strong>Smart Life</strong> über das weltweite <strong>Tuya-Ökosystem</strong>. Über die offizielle kostenlose Tuya Developer API greift SmartWatt alle Live-Werte (Watt, Volt, Ampere, On/Off) ab – während du die Steckdosen <strong>weiterhin ganz normal in Smart Life</strong> bedienst!
           </p>
 
           <div class="space-y-2.5">
             <div>
               <label class="block text-xs text-slate-300 mb-1">Tuya Access ID (Client ID):</label>
               <input id="setting-tuya-id" type="text" placeholder="z.B. 3v9x84m29xxxxxxxx"
-                class="w-full bg-white/[0.05] border border-white/15 rounded-xl px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-emerald-400">
+                class="w-full bg-white/[0.05] border border-white/15 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-400">
             </div>
 
             <div>
               <label class="block text-xs text-slate-300 mb-1">Tuya Access Secret:</label>
               <input id="setting-tuya-secret" type="password" placeholder="z.B. a82f7c0xxxxxxxxxxxxxxxxx"
-                class="w-full bg-white/[0.05] border border-white/15 rounded-xl px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-emerald-400">
+                class="w-full bg-white/[0.05] border border-white/15 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-400">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs text-slate-300 mb-1">Server Region:</label>
+                <select id="setting-tuya-endpoint" class="w-full bg-slate-900 border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-400">
+                  <option value="https://openapi.tuyaeu.com">Zentral-Europa (Deutschland)</option>
+                  <option value="https://openapi-weaz.tuyaeu.com">West-Europa</option>
+                  <option value="https://openapi.tuyaus.com">USA West</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs text-slate-300 mb-1">Smart Life User ID (UID, optional):</label>
+                <input id="setting-tuya-uid" type="text" placeholder="z.B. eu163xxxxxxxx"
+                  class="w-full bg-white/[0.05] border border-white/15 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-400">
+              </div>
             </div>
           </div>
 
+          <!-- Buttons -->
           <div class="pt-2 flex flex-wrap gap-2 items-center">
-            <button onclick="testTuyaConnection()" id="btn-test-tuya" class="px-3.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition flex items-center gap-1.5">
+            <button onclick="testTuyaConnection()" id="btn-test-tuya" class="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-md cursor-pointer">
               <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
               <span>Verbindung testen</span>
             </button>
-            <button onclick="syncTuyaDevices()" id="btn-sync-tuya" class="px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition flex items-center gap-1.5">
+            <button onclick="syncTuyaDevices()" id="btn-sync-tuya" class="px-4 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition flex items-center gap-1.5 shadow-md cursor-pointer">
               <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i>
-              <span>Geräte importieren</span>
+              <span>Aus Smart Life importieren</span>
             </button>
           </div>
 
-          <div id="tuya-test-result" class="text-xs p-2.5 rounded-xl hidden font-mono"></div>
+          <div id="tuya-test-result" class="text-xs p-3 rounded-xl hidden font-mono"></div>
+
+          <!-- Quick 3-min Guide -->
+          <details class="text-xs text-slate-400 border border-white/10 p-2.5 rounded-xl bg-black/20">
+            <summary class="cursor-pointer font-semibold text-slate-300 hover:text-white">
+              📖 3-Minuten-Anleitung: Woher bekomme ich meine Tuya API-Schlüssel?
+            </summary>
+            <div class="mt-2 space-y-1.5 text-slate-300 pl-2">
+              <p>1. Gehe auf <a href="https://iot.tuya.com" target="_blank" class="text-emerald-400 underline font-semibold">iot.tuya.com</a> und erstelle einen kostenlosen Entwickler-Account.</p>
+              <p>2. Klicke links auf <strong>Cloud -> Development -> Create Cloud Project</strong> (Region: Central Europe).</p>
+              <p>3. Klicke im Projekt auf <strong>Devices -> Link Tuya App Account</strong> und scanne den QR-Code mit deiner <strong>Smart Life App</strong>.</p>
+              <p>4. Unter <strong>Project Overview</strong> findest du deine <strong>Access ID</strong> und dein <strong>Access Secret</strong>. Trage sie oben ein und klicke auf "Verbindung testen"!</p>
+            </div>
+          </details>
+        </div>
+
+        <!-- SECTION 2: Stromtarif & Schwellenwerte -->
+        <div class="p-3.5 sm:p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
+          <h4 class="font-bold text-emerald-400 flex items-center gap-2 text-xs uppercase tracking-wider">
+            <i data-lucide="euro" class="w-4 h-4"></i>
+            <span>Tarif & Schwellenwerte</span>
+          </h4>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-300 mb-1">Arbeitspreis (€/kWh):</label>
+              <input id="setting-kwh-price" type="number" step="0.01" min="0.05" max="2.00" value="0.34"
+                class="w-full bg-white/[0.05] border border-white/15 rounded-xl px-3 py-2 text-white font-mono font-bold focus:outline-none focus:border-emerald-400">
+            </div>
+
+            <div>
+              <label class="block text-xs text-slate-300 mb-1">Standby-Schwelle (W):</label>
+              <input id="setting-standby-th" type="number" step="0.5" min="1" max="50" value="12.0"
+                class="w-full bg-white/[0.05] border border-white/15 rounded-xl px-3 py-2 text-white font-mono font-bold focus:outline-none focus:border-emerald-400">
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 3: Reset / Standard -->
+        <div class="p-3 rounded-2xl bg-white/[0.02] border border-white/10 flex justify-between items-center text-xs">
+          <span class="text-slate-400">Steckdosen zurücksetzen:</span>
+          <button onclick="resetToDefaultDevices()" class="px-3 py-1.5 rounded-full bg-rose-500/20 hover:bg-rose-500/35 text-rose-300 border border-rose-500/30 font-semibold transition cursor-pointer">
+            Standard-Geräte wiederherstellen
+          </button>
         </div>
 
       </div>
 
       <!-- Modal Footer -->
-      <div class="border-t border-white/10 pt-4 flex justify-end gap-2.5">
-        <button onclick="closeSettingsModal()" class="px-4 py-2 rounded-full liquid-glass hover:bg-white/15 text-slate-300 text-xs font-semibold transition">
-          Abbrechen
+      <div class="border-t border-white/10 pt-3 flex justify-end gap-2.5">
+        <button onclick="closeSettingsModal()" class="px-4 py-2 rounded-full liquid-glass hover:bg-white/15 text-slate-300 text-xs font-semibold transition cursor-pointer">
+          Schließen
         </button>
-        <button onclick="saveSettings()" class="px-5 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition shadow-lg shadow-emerald-500/25">
+        <button onclick="saveSettings()" class="px-5 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition shadow-lg shadow-emerald-500/20 cursor-pointer">
           Einstellungen speichern
         </button>
       </div>

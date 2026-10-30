@@ -1,7 +1,7 @@
 {
   "name": "SmartWatt - Energie & Kosten Hub",
   "short_name": "SmartWatt",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#090d16",
   "theme_color": "#10b981",
