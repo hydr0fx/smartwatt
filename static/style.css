@@ -3,17 +3,29 @@
 :root {
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --ios-green: #34C759;
-  --ios-emerald: #10B981;
-  --ios-cyan: #06B6D4;
-  --ios-blue: #007AFF;
-  --ios-amber: #FF9500;
-  --ios-red: #FF3B30;
+  
+  /* Apple iOS Palette */
+  --apple-bg: #000000;
+  --apple-surface: rgba(28, 28, 30, 0.75);
+  --apple-card: rgba(255, 255, 255, 0.05);
+  --apple-card-hover: rgba(255, 255, 255, 0.08);
+  --apple-card-active: rgba(255, 255, 255, 0.1);
+  --apple-border: rgba(255, 255, 255, 0.08);
+  --apple-border-strong: rgba(255, 255, 255, 0.15);
+  
+  --apple-green: #30D158;
+  --apple-emerald: #10B981;
+  --apple-blue: #0A84FF;
+  --apple-amber: #FF9F0A;
+  --apple-red: #FF453A;
+  --apple-purple: #BF5AF2;
+  --apple-cyan: #64D2FF;
 }
 
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  background-color: var(--apple-bg);
 }
 
 * {
@@ -23,21 +35,20 @@ html {
 
 body {
   font-family: var(--font-sans);
-  background-color: #060911;
+  background-color: #000000;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.12) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.10) 0px, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(99, 102, 241, 0.05) 0px, transparent 60%),
-    radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(14, 165, 233, 0.08) 0px, transparent 50%);
+    radial-gradient(at 15% 10%, rgba(16, 185, 129, 0.08) 0px, transparent 45%),
+    radial-gradient(at 85% 15%, rgba(6, 182, 212, 0.06) 0px, transparent 50%),
+    radial-gradient(at 50% 90%, rgba(59, 130, 246, 0.05) 0px, transparent 50%);
   background-attachment: fixed;
-  color: #f8fafc;
+  color: #F5F5F7;
   min-height: 100vh;
   margin: 0;
   padding: 0;
-  padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
   overflow-x: hidden;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  -webkit-font-smoothing: antialiased;
 }
 
 .font-mono {
@@ -45,118 +56,135 @@ body {
 }
 
 /* ========================================================
-   LIQUID GLASS DESIGN SYSTEM (Apple & Smart Life Inspired)
+   AUTHENTIC APPLE FROSTED GLASS & SQUIRCLE SURFACES
    ======================================================== */
 
-.liquid-glass {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
-  backdrop-filter: blur(28px) saturate(200%);
-  -webkit-backdrop-filter: blur(28px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 
-    0 20px 40px -15px rgba(0, 0, 0, 0.6),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.25),
-    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.25);
-  border-radius: 26px;
+.apple-nav {
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(35px) saturate(190%);
+  -webkit-backdrop-filter: blur(35px) saturate(190%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.liquid-glass-nav {
-  background: rgba(10, 15, 28, 0.82);
-  backdrop-filter: blur(32px) saturate(210%);
-  -webkit-backdrop-filter: blur(32px) saturate(210%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 
-    0 10px 30px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
-}
-
-.liquid-card {
-  background: linear-gradient(145deg, rgba(30, 41, 59, 0.45) 0%, rgba(15, 23, 42, 0.65) 100%);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+.apple-glass {
+  background: rgba(28, 28, 32, 0.65);
+  backdrop-filter: blur(30px) saturate(190%);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
-  box-shadow: 
-    0 15px 35px -10px rgba(0, 0, 0, 0.5),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
-}
-
-.liquid-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(52, 211, 153, 0.35);
-  box-shadow: 
-    0 25px 45px -12px rgba(16, 185, 129, 0.22),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.3);
-}
-
-.card-active {
-  border-color: rgba(52, 211, 153, 0.38) !important;
-  background: linear-gradient(145deg, rgba(30, 58, 60, 0.45) 0%, rgba(15, 28, 42, 0.7) 100%) !important;
-  box-shadow: 
-    0 20px 40px -10px rgba(16, 185, 129, 0.25),
-    0 0 25px -5px rgba(16, 185, 129, 0.15),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.3) !important;
-}
-
-.card-inactive {
-  opacity: 0.82;
-  border-color: rgba(255, 255, 255, 0.05);
-}
-
-/* Ambient glow accents */
-.glow-emerald {
-  text-shadow: 0 0 24px rgba(52, 211, 153, 0.6);
-}
-
-.glow-amber {
-  text-shadow: 0 0 24px rgba(251, 191, 36, 0.6);
-}
-
-.glow-rose {
-  text-shadow: 0 0 24px rgba(244, 63, 94, 0.6);
-}
-
-/* Pulsing radar dot */
-.pulse-dot {
-  position: relative;
-}
-
-.pulse-dot::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: inherit;
-  animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-}
-
-@keyframes pulse-ring {
-  0% {
-    transform: scale(0.9);
-    opacity: 0.9;
-  }
-  50% {
-    transform: scale(2.4);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(2.6);
-    opacity: 0;
-  }
+  border-radius: 28px;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
 }
 
 /* ========================================================
-   AUTHENTIC APPLE / iOS TACTILE SWITCH
+   APPLE HOME APPLIANCE TILE (WIDGET ARCHITECTURE)
    ======================================================== */
+
+.apple-tile {
+  background: rgba(28, 28, 30, 0.6);
+  backdrop-filter: blur(25px) saturate(180%);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 26px;
+  padding: 1.25rem;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.apple-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 26px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.02) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.apple-tile:hover {
+  transform: translateY(-2px) scale(1.008);
+  background: rgba(36, 36, 40, 0.75);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.6);
+}
+
+.apple-tile:active {
+  transform: scale(0.985);
+}
+
+/* TILE ACTIVE STATE (Apple Home Glow) */
+.tile-on {
+  background: linear-gradient(145deg, rgba(32, 45, 38, 0.75) 0%, rgba(18, 24, 22, 0.85) 100%) !important;
+  border-color: rgba(48, 209, 88, 0.3) !important;
+  box-shadow: 
+    0 18px 36px -10px rgba(16, 185, 129, 0.22),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+}
+
+.tile-on::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(circle, rgba(48, 209, 88, 0.18) 0%, transparent 70%);
+  pointer-events: none;
+  filter: blur(20px);
+}
+
+.tile-off {
+  opacity: 0.78;
+  background: rgba(22, 22, 24, 0.55);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.tile-off:hover {
+  opacity: 0.95;
+}
+
+/* Icon Squircle Badge */
+.tile-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+
+.tile-icon-box-on {
+  background: rgba(48, 209, 88, 0.2);
+  color: #30D158;
+  border: 1px solid rgba(48, 209, 88, 0.35);
+  box-shadow: 0 0 16px rgba(48, 209, 88, 0.3);
+}
+
+.tile-icon-box-off {
+  background: rgba(255, 255, 255, 0.06);
+  color: #8E8E93;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ========================================================
+   AUTHENTIC APPLE / iOS 18 TACTILE SWITCH
+   ======================================================== */
+
 .switch {
   position: relative;
   display: inline-block;
-  width: 50px;
-  height: 30px;
+  width: 51px;
+  height: 31px;
   cursor: pointer;
   user-select: none;
 }
@@ -170,40 +198,34 @@ body {
 .slider {
   position: absolute;
   cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(71, 85, 105, 0.5);
+  inset: 0;
+  background-color: rgba(120, 120, 128, 0.32);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  transition: .3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  border-radius: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+  border-radius: 31px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .slider:before {
   position: absolute;
   content: "";
-  height: 24px;
-  width: 24px;
+  height: 27px;
+  width: 27px;
   left: 2px;
-  bottom: 2px;
-  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
-  transition: .3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  bottom: 1px;
+  background-color: #FFFFFF;
+  transition: 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
   border-radius: 50%;
   box-shadow: 
-    0 3px 8px rgba(0, 0, 0, 0.35),
-    0 1px 2px rgba(0, 0, 0, 0.2);
+    0 3px 8px rgba(0, 0, 0, 0.25),
+    0 1px 1px rgba(0, 0, 0, 0.15);
 }
 
 input:checked + .slider {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  border-color: rgba(52, 211, 153, 0.4);
-  box-shadow: 
-    0 0 16px rgba(16, 185, 129, 0.5),
-    inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  background-color: #30D158;
+  border-color: rgba(48, 209, 88, 0.5);
+  box-shadow: 0 0 14px rgba(48, 209, 88, 0.4);
 }
 
 input:checked + .slider:before {
@@ -211,37 +233,113 @@ input:checked + .slider:before {
 }
 
 /* ========================================================
-   FLOATING DOCK / BOTTOM BAR
+   APPLE SEGMENTED CONTROL TABS
    ======================================================== */
-.floating-dock {
-  background: rgba(15, 23, 42, 0.88);
-  backdrop-filter: blur(28px) saturate(220%);
-  -webkit-backdrop-filter: blur(28px) saturate(220%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 36px;
-  box-shadow: 
-    0 25px 50px -12px rgba(0, 0, 0, 0.7),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
-  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+
+.segmented-group {
+  background: rgba(118, 118, 128, 0.24);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 9999px;
+  padding: 3px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+.segmented-btn {
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8E8E93;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  white-space: nowrap;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+.segmented-btn:hover {
+  color: #FFFFFF;
 }
 
-::-webkit-scrollbar-thumb {
+.segmented-btn-active {
   background: rgba(255, 255, 255, 0.15);
-  border-radius: 10px;
+  color: #FFFFFF !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+/* ========================================================
+   FLOATING APPLE DOCK (BOTTOM BAR)
+   ======================================================== */
+
+.apple-dock {
+  background: rgba(28, 28, 30, 0.78);
+  backdrop-filter: blur(35px) saturate(210%);
+  -webkit-backdrop-filter: blur(35px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 40px;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.8),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+}
+
+.dock-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8E8E93;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.dock-item:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dock-item-active {
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+/* ========================================================
+   MODALS / APPLE BOTTOM SHEETS
+   ======================================================== */
+
+.apple-sheet {
+  background: rgba(24, 24, 28, 0.88);
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 32px;
+  box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.85);
+}
+
+/* Pulse indicator dot */
+.live-pulse {
+  position: relative;
+}
+
+.live-pulse::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: inherit;
+  opacity: 0.6;
+  animation: pulse-wave 2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+@keyframes pulse-wave {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(2.4); opacity: 0; }
 }
 
 /* Mobile & Touch optimizations */
@@ -254,17 +352,24 @@ input:checked + .slider:before {
 }
 
 @media (max-width: 640px) {
-  .liquid-card {
-    border-radius: 20px;
+  .apple-tile {
+    border-radius: 22px;
     padding: 1rem;
   }
-  .liquid-glass {
-    border-radius: 20px;
+  .apple-glass {
+    border-radius: 22px;
   }
-  .floating-dock {
+  .apple-sheet {
+    border-radius: 24px;
+  }
+  .apple-dock {
     width: calc(100% - 24px);
-    max-width: 380px;
+    max-width: 360px;
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    padding: 6px;
     justify-content: space-around;
+  }
+  .dock-item {
+    padding: 6px 12px;
   }
 }

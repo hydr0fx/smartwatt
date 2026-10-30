@@ -1,4 +1,4 @@
-// SmartWatt - Unified High-Performance Engine (Apple & Smart Life Liquid Glass)
+// SmartWatt - Apple iOS 18 Design Architecture
 let isStandaloneMode = false;
 let currentDevices = [];
 let currentRoomFilter = 'all';
@@ -15,6 +15,7 @@ let currentSettings = {
 
 let activeTimerDeviceId = null;
 let activeCalcDeviceId = null;
+let activeSheetDeviceId = null;
 let activeChartTab = 'power';
 let powerChartInstance = null;
 let distributionChartInstance = null;
@@ -23,11 +24,11 @@ let pollingTimer = null;
 let tickCount = 0;
 let isQuickPriceOpen = false;
 
-// Default initial device profiles (Smart Life real-world examples)
+// Default initial devices (Clean Smart Life Real-World Profiles)
 const defaultInitialDevices = [
   {
     id: "demo-gaming-pc",
-    name: "Gaming PC & Setup",
+    name: "Gaming-PC & Setup",
     icon: "monitor",
     category: "entertainment",
     room: "entertainment",
@@ -45,7 +46,7 @@ const defaultInitialDevices = [
   },
   {
     id: "demo-fridge",
-    name: "Kühlschrank (Küche)",
+    name: "Kühlschrank",
     icon: "refrigerator",
     category: "kitchen",
     room: "kitchen",
@@ -63,7 +64,7 @@ const defaultInitialDevices = [
   },
   {
     id: "demo-washing",
-    name: "Waschmaschine (Bad)",
+    name: "Waschmaschine",
     icon: "washing-machine",
     category: "utility",
     room: "utility",
@@ -87,7 +88,7 @@ const defaultInitialDevices = [
     room: "entertainment",
     room_name: "Gaming & TV",
     is_on: 1,
-    power_w: 6.8, // Standby killer demonstration
+    power_w: 6.8, // Standby demonstration
     voltage_v: 232.0,
     current_ma: 29.0,
     energy_today_kwh: 0.32,
@@ -103,18 +104,16 @@ const defaultInitialDevices = [
 document.addEventListener('DOMContentLoaded', async () => {
   if (window.lucide) lucide.createIcons();
 
-  // Register PWA Service Worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW reg error:', err));
   }
 
-  // Detect backend vs 24/7 autonomous client engine
   await checkBackendAvailability();
   await loadSettings();
   await updateAll(true);
   await initCharts();
 
-  // Background ticker (every 3 seconds)
+  // Polling loop
   pollingTimer = setInterval(async () => {
     tickCount++;
     if (isStandaloneMode) {
@@ -134,9 +133,7 @@ async function checkBackendAvailability() {
   } catch (e) {}
   
   isStandaloneMode = true;
-  console.log("Running in 24/7 Autonomous Smart Life Engine");
 
-  // Load from localStorage or initialize with default devices
   const savedDevs = localStorage.getItem('smartwatt_devices_v4');
   if (savedDevs) {
     try {
@@ -155,10 +152,9 @@ async function checkBackendAvailability() {
   }
 }
 
-// In-Browser Simulation Loop (Continuous calculation)
+// In-Browser Live Physics Simulation
 function runStandaloneTick() {
   currentDevices.forEach(d => {
-    // Handle timer countdown
     if (d.timer_seconds_left > 0) {
       d.timer_seconds_left -= 3;
       if (d.timer_seconds_left <= 0) {
@@ -194,7 +190,6 @@ function runStandaloneTick() {
         d.power_w = 6.8 + (Math.random() * 0.4 - 0.2);
         d.voltage_v = 232.0;
       } else {
-        // Custom added device fluctuation
         const p = d._saved_power_w || d.power_w || 100.0;
         d.power_w = Math.max(1.0, p + (Math.random() * 4 - 2));
         d.voltage_v = 230.0;
@@ -204,7 +199,6 @@ function runStandaloneTick() {
       d.current_ma = (d.power_w / d.voltage_v) * 1000.0;
       if (d.power_w > (d.peak_power_w || 0)) d.peak_power_w = d.power_w;
 
-      // Real energy accumulation
       const addedKwh = (d.power_w / 1000.0) * (3.0 / 3600.0);
       d.energy_today_kwh = (d.energy_today_kwh || 0.0) + addedKwh;
       d.energy_total_kwh = (d.energy_total_kwh || 0.0) + addedKwh;
@@ -222,17 +216,14 @@ function enrichDevice(d) {
 
   const power = d.is_on ? (d.power_w || 0.0) : 0.0;
   
-  // Exact Burn Rates
   const burnRateH = (power / 1000.0) * kwhPrice;
   const costDayRate = burnRateH * 24.0;
-  const costMonthRate = costDayRate * 30.0;  // Standard 30 days
-  const costYearRate = costDayRate * 365.0;  // Standard 365 days
+  const costMonthRate = costDayRate * 30.0;
+  const costYearRate = costDayRate * 365.0;
 
-  // Accumulated Costs
   const costToday = (d.energy_today_kwh || 0.0) * kwhPrice;
   const costTotal = (d.energy_total_kwh || 0.0) * kwhPrice;
 
-  // Standby & Overload
   const isStandby = Boolean(d.is_on && power >= 0.5 && power <= standbyTh);
   const standbyAnnual = isStandby ? ((power / 1000.0) * 24.0 * 365.0 * kwhPrice) : 0.0;
   const isOverloaded = power >= overloadTh;
@@ -252,18 +243,17 @@ function enrichDevice(d) {
   };
 }
 
-// Room category filter (Smart Life style)
+// Filter room categories
 function filterRoom(room) {
   currentRoomFilter = room;
   
-  // Update Tab Styling
   ['all', 'entertainment', 'kitchen', 'utility'].forEach(r => {
     const btn = document.getElementById(`room-tab-${r}`);
     if (!btn) return;
     if (r === room) {
-      btn.className = 'room-tab px-4 py-2 rounded-full text-xs font-bold transition-all bg-emerald-500/25 text-emerald-300 border border-emerald-400/40 shadow-sm shrink-0 cursor-pointer';
+      btn.className = 'segmented-btn segmented-btn-active';
     } else {
-      btn.className = 'room-tab px-4 py-2 rounded-full text-xs font-semibold transition-all liquid-glass text-slate-400 hover:text-white shrink-0 cursor-pointer';
+      btn.className = 'segmented-btn';
     }
   });
 
@@ -314,18 +304,20 @@ async function updateAll(fullRebuild = false) {
     };
   }
 
-  // Update Top Hero Display with standard German formatting
+  // Update Top Hero Display
   const totalPowerEl = document.getElementById('kpi-total-power');
   if (totalPowerEl) totalPowerEl.textContent = Math.round(summary.total_power_w).toLocaleString('de-DE');
 
-  const activeCountEl = document.getElementById('kpi-active-count');
-  if (activeCountEl) activeCountEl.textContent = summary.active_devices_count;
-
   const activeDetailEl = document.getElementById('kpi-active-devices-detail');
-  if (activeDetailEl) activeDetailEl.textContent = `${summary.active_devices_count} von ${summary.device_count} Steckdosen an`;
+  if (activeDetailEl) activeDetailEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${summary.total_power_w > 0 ? 'bg-emerald-400' : 'bg-neutral-500'}"></span><span>${summary.active_devices_count} von ${summary.device_count} Steckdosen aktiv</span>`;
 
   const headerStatusEl = document.getElementById('header-sub-status');
-  if (headerStatusEl) headerStatusEl.textContent = `${summary.active_devices_count} aktiv • ${Math.round(summary.total_power_w)} W live`;
+  if (headerStatusEl) headerStatusEl.textContent = `${summary.active_devices_count} aktiv • ${Math.round(summary.total_power_w)} W`;
+
+  const headerDot = document.getElementById('header-pulse-dot');
+  if (headerDot) {
+    headerDot.className = summary.total_power_w > 0 ? 'w-2 h-2 rounded-full bg-emerald-400 live-pulse shrink-0' : 'w-2 h-2 rounded-full bg-neutral-500 shrink-0';
+  }
 
   const burnEl = document.getElementById('kpi-burn-rate-h');
   if (burnEl) burnEl.textContent = summary.total_burn_rate_eur_h.toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
@@ -348,24 +340,9 @@ async function updateAll(fullRebuild = false) {
     if (summary.standby_vampire_count > 0) {
       vampireHeroBar.classList.remove('hidden');
       document.getElementById('kpi-vampire-count').textContent = summary.standby_vampire_count;
-      document.getElementById('kpi-vampire-savings').textContent = `~${summary.standby_potential_annual_eur.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € / Jahr verschwendet`;
+      document.getElementById('kpi-vampire-savings').textContent = `~${summary.standby_potential_annual_eur.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € / Jahr`;
     } else {
       vampireHeroBar.classList.add('hidden');
-    }
-  }
-
-  // Live Pulse Ring Animation state
-  const ring = document.getElementById('kpi-live-ring');
-  const dot = document.getElementById('kpi-live-dot');
-  if (ring && dot) {
-    if (summary.total_power_w > 0) {
-      ring.style.animationPlayState = 'running';
-      ring.className = 'absolute inset-0 rounded-full border-4 border-emerald-400/30 border-t-emerald-400 animate-spin';
-      dot.className = 'inline-block w-2 h-2 rounded-full bg-emerald-400 mb-0.5 pulse-dot';
-    } else {
-      ring.style.animationPlayState = 'paused';
-      ring.className = 'absolute inset-0 rounded-full border-4 border-slate-700/40 border-t-slate-500';
-      dot.className = 'inline-block w-2 h-2 rounded-full bg-slate-500 mb-0.5';
     }
   }
 
@@ -391,11 +368,9 @@ async function updateAll(fullRebuild = false) {
   updateModeBadge(isStandaloneMode || summary.simulation_mode);
   renderDeviceGrid(filteredDevices, fullRebuild);
 
-  // Update room button count text
   const roomAllBtn = document.getElementById('room-tab-all');
   if (roomAllBtn) roomAllBtn.textContent = `Alle (${devices.length})`;
 
-  // Keep charts in sync
   if (distributionChartInstance && activeChartTab === 'distribution') {
     updateDistributionChart(false);
   }
@@ -403,23 +378,17 @@ async function updateAll(fullRebuild = false) {
 
 function updateModeBadge(isSimulation) {
   const badge = document.getElementById('mode-badge');
-  const btnToggle = document.getElementById('btn-toggle-sim');
+  if (!badge) return;
   if (isSimulation) {
-    if (badge) {
-      badge.textContent = isStandaloneMode ? '24/7 Demo' : 'Demo Modus';
-      badge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shrink-0';
-    }
-    if (btnToggle) btnToggle.textContent = 'Zu Live Tuya wechseln';
+    badge.textContent = isStandaloneMode ? 'Demo' : 'Demo Modus';
+    badge.className = 'text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 shrink-0';
   } else {
-    if (badge) {
-      badge.textContent = 'Tuya Live';
-      badge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shrink-0';
-    }
-    if (btnToggle) btnToggle.textContent = 'Zu Demo Modus wechseln';
+    badge.textContent = 'Live Tuya';
+    badge.className = 'text-[10px] font-semibold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/25 shrink-0';
   }
 }
 
-// Render Device Grid
+// Render Apple Home Appliance Tiles
 function renderDeviceGrid(devices, fullRebuild) {
   const container = document.getElementById('devices-container');
   if (!container) return;
@@ -427,7 +396,7 @@ function renderDeviceGrid(devices, fullRebuild) {
   if (fullRebuild || container.children.length !== devices.length) {
     container.innerHTML = devices.length > 0 
       ? devices.map(d => createDeviceCardHtml(d)).join('')
-      : `<div class="col-span-full py-12 text-center text-slate-400 liquid-glass"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-slate-500"></i><p>Keine Steckdosen in diesem Raum gefunden.</p></div>`;
+      : `<div class="col-span-full py-12 text-center text-neutral-400 apple-glass"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-neutral-500"></i><p>Keine Steckdosen in diesem Raum vorhanden.</p></div>`;
     if (window.lucide) lucide.createIcons();
     return;
   }
@@ -437,188 +406,163 @@ function renderDeviceGrid(devices, fullRebuild) {
     if (!card) return;
 
     if (d.is_on) {
-      card.classList.add('card-active');
-      card.classList.remove('card-inactive');
+      card.classList.add('tile-on');
+      card.classList.remove('tile-off');
     } else {
-      card.classList.add('card-inactive');
-      card.classList.remove('card-active');
+      card.classList.add('tile-off');
+      card.classList.remove('tile-on');
+    }
+
+    const iconBox = card.querySelector('.tile-icon-box');
+    if (iconBox) {
+      iconBox.className = `tile-icon-box ${d.is_on ? 'tile-icon-box-on' : 'tile-icon-box-off'}`;
     }
 
     const powerEl = card.querySelector('.dev-power-value');
     if (powerEl) {
       powerEl.textContent = d.is_on ? Math.round(d.power_w).toLocaleString('de-DE') : '0';
-      powerEl.className = `dev-power-value text-2xl sm:text-3xl font-black font-mono tracking-tight ${!d.is_on ? 'text-slate-500' : (d.power_w < 100 ? 'text-emerald-400 glow-emerald' : (d.power_w < 1000 ? 'text-amber-400 glow-amber' : 'text-rose-400 glow-rose'))}`;
+      powerEl.className = `dev-power-value text-2xl font-black font-mono tracking-tight ${d.is_on ? 'text-white' : 'text-neutral-500'}`;
     }
 
     const burnEl = card.querySelector('.dev-burn-rate');
-    if (burnEl) burnEl.textContent = d.is_on ? `${d.burn_rate_eur_h.toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} €/h` : '0,000 €/h';
-
-    const dayEl = card.querySelector('.dev-cost-day');
-    if (dayEl) dayEl.textContent = d.is_on ? `${d.cost_day_rate_eur.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/Tag` : '0,00 €/Tag';
-
-    const monthEl = card.querySelector('.dev-cost-month');
-    if (monthEl) monthEl.textContent = d.is_on ? `${d.cost_month_rate_eur.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/Monat` : '0,00 €/Monat';
+    if (burnEl) {
+      burnEl.textContent = d.is_on ? `${d.burn_rate_eur_h.toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} €/h` : '0,000 €/h';
+      burnEl.className = `dev-burn-rate text-[11px] font-mono font-semibold ${d.is_on ? 'text-emerald-400' : 'text-neutral-500'}`;
+    }
 
     const switchEl = card.querySelector('.dev-switch-input');
     if (switchEl && switchEl.checked !== Boolean(d.is_on)) {
       switchEl.checked = Boolean(d.is_on);
-    }
-
-    const vEl = card.querySelector('.dev-voltage');
-    if (vEl) vEl.textContent = `${(d.voltage_v || 230).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} V`;
-
-    const iEl = card.querySelector('.dev-current');
-    if (iEl) iEl.textContent = d.current_ma > 1000 ? `${(d.current_ma / 1000).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} A` : `${Math.round(d.current_ma || 0)} mA`;
-
-    const todayEl = card.querySelector('.dev-today-stats');
-    if (todayEl) todayEl.textContent = `${(d.energy_today_kwh || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kWh (~${d.cost_today_eur.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €)`;
-
-    const peakEl = card.querySelector('.dev-peak-power');
-    if (peakEl) peakEl.textContent = `${Math.round(d.peak_power_w || 0)} W`;
-
-    const timerBtn = card.querySelector('.dev-timer-btn');
-    if (timerBtn) {
-      if (d.timer_seconds_left > 0) {
-        const mins = Math.ceil(d.timer_seconds_left / 60);
-        timerBtn.textContent = `⏱ ${mins}m`;
-        timerBtn.className = 'dev-timer-btn flex-1 py-1.5 px-2.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold transition text-xs flex items-center justify-center gap-1 cursor-pointer';
-      } else {
-        timerBtn.textContent = 'Timer';
-        timerBtn.className = 'dev-timer-btn flex-1 py-1.5 px-2.5 rounded-full liquid-glass hover:bg-white/15 text-slate-300 font-semibold transition text-xs flex items-center justify-center gap-1 cursor-pointer';
-      }
-    }
-
-    const vampireEl = card.querySelector('.dev-vampire-banner');
-    if (vampireEl) {
-      if (d.is_standby) {
-        vampireEl.classList.remove('hidden');
-        vampireEl.querySelector('.dev-vampire-text').textContent = `Standby: ${d.power_w.toFixed(1)}W (~${d.standby_annual_eur.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/J)`;
-      } else {
-        vampireEl.classList.add('hidden');
-      }
     }
   });
 }
 
 function createDeviceCardHtml(d) {
   const icon = d.icon || 'plug';
-  const isOverloaded = d.is_overloaded;
-  const isStandby = d.is_standby;
-  const powerColor = !d.is_on ? 'text-slate-500' : (d.power_w < 100 ? 'text-emerald-400 glow-emerald' : (d.power_w < 1000 ? 'text-amber-400 glow-amber' : 'text-rose-400 glow-rose'));
-  const cardStateClass = d.is_on ? 'card-active' : 'card-inactive';
-
-  const iconGradients = {
-    'entertainment': 'from-indigo-500/20 to-purple-500/20 text-indigo-400 border-indigo-400/30',
-    'kitchen': 'from-amber-500/20 to-orange-500/20 text-amber-400 border-amber-400/30',
-    'utility': 'from-cyan-500/20 to-blue-500/20 text-cyan-400 border-cyan-400/30'
-  };
-  const iconStyle = iconGradients[d.category] || 'from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-400/30';
+  const tileStateClass = d.is_on ? 'tile-on' : 'tile-off';
+  const iconStateClass = d.is_on ? 'tile-icon-box-on' : 'tile-icon-box-off';
 
   return `
-    <div id="dev-card-${d.id}" class="liquid-card p-4 sm:p-5 flex flex-col justify-between ${cardStateClass} relative overflow-hidden">
-      <div>
-        <!-- Top bar: Icon, Name, Room, Delete & Apple Switch -->
-        <div class="flex justify-between items-start gap-2.5 mb-3">
-          <div class="flex items-center gap-2.5 min-w-0">
-            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br ${iconStyle} border flex items-center justify-center shadow-lg shrink-0">
-              <i data-lucide="${icon}" class="w-5 h-5"></i>
-            </div>
-            <div class="min-w-0">
-              <h3 class="font-bold text-sm text-white tracking-tight leading-snug truncate" title="${d.name}">${d.name}</h3>
-              <div class="flex items-center gap-1.5 mt-0.5">
-                <span class="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full bg-white/10 text-slate-300 border border-white/10 truncate">${d.room_name || d.category || 'Smart Life'}</span>
-                <span class="text-[9px] uppercase px-1.5 py-0.5 rounded-full ${d.is_on ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25' : 'bg-slate-700/30 text-slate-400 border border-white/5'} font-mono shrink-0">${d.is_on ? 'Live' : 'Aus'}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-1.5 shrink-0">
-            <!-- Delete Button -->
-            <button onclick="deleteDevice('${d.id}')" class="w-7 h-7 rounded-full liquid-glass hover:bg-rose-500/20 hover:text-rose-400 text-slate-500 flex items-center justify-center transition text-xs cursor-pointer" title="Steckdose entfernen">
-              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-            </button>
-
-            <!-- Tactile Apple Switch -->
-            <label class="switch shrink-0" title="Sofort umschalten">
-              <input type="checkbox" class="dev-switch-input" ${d.is_on ? 'checked' : ''} onchange="toggleDevice('${d.id}', this.checked)">
-              <span class="slider"></span>
-            </label>
-          </div>
+    <div id="dev-card-${d.id}" class="apple-tile ${tileStateClass}" onclick="openDeviceSheet('${d.id}')">
+      <!-- Top Row: Icon Badge & Tactile Apple Switch -->
+      <div class="flex items-center justify-between mb-3.5">
+        <div class="tile-icon-box ${iconStateClass}">
+          <i data-lucide="${icon}" class="w-5 h-5"></i>
         </div>
-
-        ${isOverloaded ? `
-          <div class="mb-2.5 px-2.5 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-semibold flex items-center gap-2 animate-pulse">
-            <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-400 shrink-0"></i>
-            <span>Überlastung (>2500 Watt)!</span>
-          </div>
-        ` : ''}
-
-        <div class="dev-vampire-banner mb-2.5 px-2.5 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-medium flex items-center justify-between gap-1.5 ${isStandby ? '' : 'hidden'}">
-          <div class="flex items-center gap-1.5 truncate">
-            <i data-lucide="battery-charging" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
-            <span class="dev-vampire-text text-[11px] truncate">Standby: ${d.power_w.toFixed(1)}W (~${d.standby_annual_eur.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €/J)</span>
-          </div>
-          <button onclick="toggleDevice('${d.id}', false)" class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/30 hover:bg-amber-500/50 text-white font-bold transition shrink-0 cursor-pointer">Aus</button>
-        </div>
-
-        <!-- Watt Display & Cost Rate Box -->
-        <div class="my-2.5 p-3 rounded-2xl bg-white/[0.03] border border-white/10">
-          <div class="flex items-baseline justify-between">
-            <span class="text-xs text-slate-400 font-medium">Momentan-Last:</span>
-            <div class="flex items-baseline gap-1">
-              <span class="dev-power-value text-2xl sm:text-3xl font-black font-mono tracking-tight ${powerColor}">
-                ${d.is_on ? Math.round(d.power_w).toLocaleString('de-DE') : '0'}
-              </span>
-              <span class="text-xs font-bold text-slate-400">W</span>
-            </div>
-          </div>
-
-          <div class="mt-2 pt-2 border-t border-white/10 space-y-1">
-            <div class="flex justify-between items-center text-xs">
-              <span class="text-slate-400 font-medium">Kostenrate:</span>
-              <strong class="dev-burn-rate font-mono text-emerald-400 font-bold">
-                ${d.is_on ? (d.burn_rate_eur_h.toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' €/h') : '0,000 €/h'}
-              </strong>
-            </div>
-
-            <div class="flex justify-between items-center text-[11px] text-slate-400 font-mono">
-              <span class="dev-cost-day">${d.is_on ? (d.cost_day_rate_eur.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €/Tag') : '0,00 €/Tag'}</span>
-              <span class="dev-cost-month">${d.is_on ? (d.cost_month_rate_eur.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €/Monat') : '0,00 €/Monat'}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Electrical Telemetry -->
-        <div class="grid grid-cols-3 gap-1 py-1.5 px-2 rounded-xl bg-black/20 text-[10px] text-slate-400 font-mono border border-white/5">
-          <div class="truncate">Volt: <span class="dev-voltage text-slate-200 font-bold">${(d.voltage_v || 230).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} V</span></div>
-          <div class="text-center truncate">Strom: <span class="dev-current text-slate-200 font-bold">${d.current_ma > 1000 ? ((d.current_ma / 1000).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' A') : (Math.round(d.current_ma || 0) + ' mA')}</span></div>
-          <div class="text-right truncate">Peak: <span class="dev-peak-power text-slate-200 font-bold">${Math.round(d.peak_power_w || 0)} W</span></div>
+        <div onclick="event.stopPropagation()">
+          <label class="switch" title="Umschalten">
+            <input type="checkbox" class="dev-switch-input" ${d.is_on ? 'checked' : ''} onchange="toggleDevice('${d.id}', this.checked)">
+            <span class="slider"></span>
+          </label>
         </div>
       </div>
 
-      <!-- Bottom Card: Today stats and Action Buttons -->
-      <div class="mt-3.5 pt-2.5 border-t border-white/10 space-y-2">
-        <div class="flex items-center justify-between text-xs">
-          <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Heute bisher:</span>
-          <span class="dev-today-stats text-slate-200 font-mono font-bold text-[11px]">
-            ${(d.energy_today_kwh || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kWh (~${d.cost_today_eur.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €)
+      <!-- Middle: Name & Room Subtitle -->
+      <div class="space-y-0.5">
+        <h3 class="text-sm sm:text-base font-bold text-white tracking-tight truncate">${d.name}</h3>
+        <p class="text-[11px] text-neutral-400 font-medium truncate">${d.room_name || d.category || 'Smart Life'}</p>
+      </div>
+
+      <!-- Bottom: Live Wattage & Cost Rate -->
+      <div class="mt-4 pt-3 border-t border-white/[0.06] flex items-baseline justify-between">
+        <div class="flex items-baseline gap-1">
+          <span class="dev-power-value text-2xl font-black font-mono tracking-tight ${d.is_on ? 'text-white' : 'text-neutral-500'}">
+            ${d.is_on ? Math.round(d.power_w).toLocaleString('de-DE') : '0'}
           </span>
+          <span class="text-xs font-semibold text-neutral-500">W</span>
         </div>
-
-        <div class="flex items-center justify-between gap-2 pt-0.5">
-          <button onclick="openCalcModal('${d.id}')" class="flex-1 py-1.5 px-2.5 rounded-full bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 border border-emerald-400/30 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer">
-            <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
-            <span>Rechner</span>
-          </button>
-
-          <button onclick="openTimerModal('${d.id}', '${d.name.replace(/'/g, "\\'")}')" class="dev-timer-btn flex-1 py-1.5 px-2.5 rounded-full liquid-glass hover:bg-white/15 text-slate-300 font-semibold transition text-xs flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer">
-            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-            <span>${d.timer_seconds_left > 0 ? `⏱ ${Math.ceil(d.timer_seconds_left / 60)}m` : 'Timer'}</span>
-          </button>
-        </div>
+        <span class="dev-burn-rate text-[11px] font-mono font-semibold ${d.is_on ? 'text-emerald-400' : 'text-neutral-500'}">
+          ${d.is_on ? (d.burn_rate_eur_h.toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' €/h') : '0,000 €/h'}
+        </span>
       </div>
     </div>
   `;
+}
+
+// APPLE DEVICE INSPECTOR SHEET (MODAL)
+function openDeviceSheet(deviceId) {
+  activeSheetDeviceId = deviceId;
+  const dev = currentDevices.find(d => d.id === deviceId);
+  if (!dev) return;
+
+  const enriched = enrichDevice(dev);
+
+  document.getElementById('sheet-dev-name').textContent = enriched.name;
+  document.getElementById('sheet-dev-room').textContent = enriched.room_name || enriched.category || 'Smart Life';
+  
+  const statusBadge = document.getElementById('sheet-dev-status-badge');
+  if (statusBadge) {
+    statusBadge.textContent = enriched.is_on ? 'Aktiv (Eingeschaltet)' : 'Ausgeschaltet';
+    statusBadge.className = enriched.is_on ? 'text-[10px] font-semibold text-emerald-400 font-mono' : 'text-[10px] font-semibold text-neutral-500 font-mono';
+  }
+
+  const iconEl = document.getElementById('sheet-icon');
+  if (iconEl) iconEl.setAttribute('data-lucide', enriched.icon || 'plug');
+
+  const wattVal = document.getElementById('sheet-watt-value');
+  if (wattVal) wattVal.textContent = enriched.is_on ? Math.round(enriched.power_w).toLocaleString('de-DE') : '0';
+
+  const sheetSwitch = document.getElementById('sheet-switch');
+  if (sheetSwitch) sheetSwitch.checked = Boolean(enriched.is_on);
+
+  const teleV = document.getElementById('sheet-tele-v');
+  if (teleV) teleV.textContent = `${(enriched.voltage_v || 230).toFixed(1).replace('.', ',')} V`;
+
+  const teleA = document.getElementById('sheet-tele-a');
+  if (teleA) teleA.textContent = enriched.current_ma > 1000 ? `${(enriched.current_ma / 1000).toFixed(2).replace('.', ',')} A` : `${Math.round(enriched.current_ma || 0)} mA`;
+
+  const telePeak = document.getElementById('sheet-tele-peak');
+  if (telePeak) telePeak.textContent = `${Math.round(enriched.peak_power_w || 0)} W`;
+
+  const teleKwh = document.getElementById('sheet-tele-kwh');
+  if (teleKwh) teleKwh.textContent = `${(enriched.energy_today_kwh || 0).toFixed(2).replace('.', ',')} kWh`;
+
+  // Period rates
+  const rH = document.getElementById('sheet-rate-h');
+  if (rH) rH.textContent = enriched.is_on ? `${enriched.burn_rate_eur_h.toFixed(3).replace('.', ',')} €` : '0,000 €';
+
+  const rD = document.getElementById('sheet-rate-d');
+  if (rD) rD.textContent = enriched.is_on ? `${enriched.cost_day_rate_eur.toFixed(2).replace('.', ',')} €` : '0,00 €';
+
+  const rM = document.getElementById('sheet-rate-m');
+  if (rM) rM.textContent = enriched.is_on ? `${enriched.cost_month_rate_eur.toFixed(2).replace('.', ',')} €` : '0,00 €';
+
+  const rY = document.getElementById('sheet-rate-y');
+  if (rY) rY.textContent = enriched.is_on ? `${enriched.cost_year_rate_eur.toFixed(2).replace('.', ',')} €` : '0,00 €';
+
+  document.getElementById('device-sheet-modal').classList.remove('hidden');
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeDeviceSheetModal() {
+  activeSheetDeviceId = null;
+  document.getElementById('device-sheet-modal').classList.add('hidden');
+}
+
+function toggleDeviceFromSheet(checked) {
+  if (activeSheetDeviceId) {
+    toggleDevice(activeSheetDeviceId, checked);
+    setTimeout(() => openDeviceSheet(activeSheetDeviceId), 60);
+  }
+}
+
+function openCalcModalFromSheet() {
+  const id = activeSheetDeviceId;
+  closeDeviceSheetModal();
+  if (id) openCalcModal(id);
+}
+
+function openTimerModalFromSheet() {
+  const dev = currentDevices.find(d => d.id === activeSheetDeviceId);
+  const id = activeSheetDeviceId;
+  closeDeviceSheetModal();
+  if (dev && id) openTimerModal(id, dev.name);
+}
+
+function deleteDeviceFromSheet() {
+  const id = activeSheetDeviceId;
+  closeDeviceSheetModal();
+  if (id) deleteDevice(id);
 }
 
 // ZERO-LATENCY TOGGLE FUNCTION
@@ -663,7 +607,7 @@ async function toggleAllDevices() {
   currentDevices.forEach(d => {
     d.is_on = targetState ? 1 : 0;
     if (!d.is_on) {
-      d._saved_power_w = d.power_w > 0 ? dev.power_w : (d._saved_power_w || 100);
+      d._saved_power_w = d.power_w > 0 ? d.power_w : (d._saved_power_w || 100);
       d.power_w = 0.0;
       d.current_ma = 0.0;
     } else {
@@ -814,7 +758,6 @@ function openCalcModal(deviceId) {
   const currentW = dev.is_on ? Math.round(dev.power_w) : Math.round(dev._saved_power_w || 400);
   const currentPrice = parseFloat(currentSettings.kwh_price || '0.34');
 
-  document.getElementById('calc-modal-dev-name').textContent = `${dev.name} (Live)`;
   document.getElementById('calc-watt-input').value = currentW > 0 ? currentW : 400;
   document.getElementById('calc-price-input').value = currentPrice.toFixed(2);
   document.getElementById('calc-modal').classList.remove('hidden');
@@ -840,9 +783,7 @@ function recalculateCustomCalc() {
 
   const intervals = [
     { id: '1h', hours: 1 },
-    { id: '2h', hours: 2 },
     { id: '4h', hours: 4 },
-    { id: '8h', hours: 8 },
     { id: '1d', hours: 24 },
     { id: '1w', hours: 24 * 7 },
     { id: '1m', hours: 24 * 30 },
@@ -877,7 +818,6 @@ function recalculateCustomCalc() {
 // Timer Modal
 function openTimerModal(deviceId, deviceName) {
   activeTimerDeviceId = deviceId;
-  document.getElementById('timer-modal-dev-name').textContent = deviceName;
   document.getElementById('timer-modal').classList.remove('hidden');
   if (window.lucide) lucide.createIcons();
 }
@@ -917,7 +857,8 @@ function openSettingsModal(targetSection = '') {
 
 function closeSettingsModal() {
   document.getElementById('settings-modal').classList.add('hidden');
-  document.getElementById('tuya-test-result').classList.add('hidden');
+  const resBox = document.getElementById('qr-result-box');
+  if (resBox) resBox.classList.add('hidden');
 }
 
 async function loadSettings() {
@@ -936,26 +877,14 @@ async function loadSettings() {
   document.getElementById('quick-price-label').textContent = `${price.toFixed(2).replace('.', ',')} €`;
   document.getElementById('setting-kwh-price').value = price;
   document.getElementById('setting-standby-th').value = currentSettings.standby_threshold_w || '12.0';
-  document.getElementById('setting-tuya-id').value = currentSettings.tuya_access_id || '';
-  document.getElementById('setting-tuya-secret').value = currentSettings.tuya_access_secret || '';
-  document.getElementById('setting-tuya-endpoint').value = currentSettings.tuya_endpoint || 'https://openapi.tuyaeu.com';
-  document.getElementById('setting-tuya-uid').value = currentSettings.tuya_uid || '';
 }
 
 async function saveSettings() {
   const kwhPrice = document.getElementById('setting-kwh-price').value;
   const standbyTh = document.getElementById('setting-standby-th').value;
-  const tuyaId = document.getElementById('setting-tuya-id').value;
-  const tuyaSecret = document.getElementById('setting-tuya-secret').value;
-  const tuyaEndpoint = document.getElementById('setting-tuya-endpoint').value;
-  const tuyaUid = document.getElementById('setting-tuya-uid').value;
 
   currentSettings.kwh_price = kwhPrice;
   currentSettings.standby_threshold_w = standbyTh;
-  currentSettings.tuya_access_id = tuyaId;
-  currentSettings.tuya_access_secret = tuyaSecret;
-  currentSettings.tuya_endpoint = tuyaEndpoint;
-  currentSettings.tuya_uid = tuyaUid;
 
   if (isStandaloneMode) {
     localStorage.setItem('smartwatt_settings_v4', JSON.stringify(currentSettings));
@@ -976,7 +905,7 @@ async function saveSettings() {
   await updateAll(true);
 }
 
-// SMART LIFE QR CODE IMPORT FLOW (Home Assistant Official Standard)
+// SMART LIFE QR CODE IMPORT FLOW (Home Assistant Standard)
 let qrPollInterval = null;
 
 async function requestTuyaQRCode() {
@@ -999,27 +928,32 @@ async function requestTuyaQRCode() {
   if (resultBox) resultBox.classList.add('hidden');
   if (qrPollInterval) clearInterval(qrPollInterval);
 
+  // If in standalone mode (hosted on GitHub Pages without local backend)
   if (isStandaloneMode) {
-    const mockToken = 'AY' + Date.now() + 'x' + userCode;
-    const qrData = `tuyaSmart--qrLogin?token=${mockToken}`;
-    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrData)}&bgcolor=ffffff&color=060911`;
-
-    if (displayBox && qrImage) {
-      qrImage.src = qrImageUrl;
-      displayBox.classList.remove('hidden');
-      if (qrStatusText) {
-        qrStatusText.innerHTML = `
-          <div class="space-y-1">
-            <div class="text-emerald-300 font-bold flex items-center justify-center gap-2">
-              <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
-              <span>QR-Code erzeugt!</span>
-            </div>
-            <p class="text-[11px] text-slate-300">
-              Scanne den Code mit Smart Life. Für den automatischen Live-Stream starte <strong>start.bat</strong> auf deinem PC, oder nutze unten die <strong>1-Klick Schnell-Vorlagen</strong>.
-            </p>
+    if (resultBox) {
+      resultBox.classList.remove('hidden');
+      resultBox.className = 'text-xs p-3.5 rounded-xl border bg-amber-950/40 text-amber-200 border-amber-800/60 leading-relaxed';
+      resultBox.innerHTML = `
+        <div class="space-y-2">
+          <div class="font-bold text-amber-300 flex items-center gap-1.5">
+            <i data-lucide="info" class="w-4 h-4 shrink-0"></i>
+            <span>Wichtiger Hinweis zur Online-Webseite:</span>
           </div>
-        `;
-      }
+          <p>
+            Tuya blockiert direkte Cloud-Verbindungen von statischen Webseiten im Browser (CORS-Schutz). Deshalb führt ein Scan auf der Online-Webseite zu <em>"illegal param error"</em>.
+          </p>
+          <div class="p-2.5 rounded-lg bg-black/40 border border-white/10 space-y-1 text-slate-300">
+            <strong>So funktioniert der echte QR-Scan fehlerfrei:</strong>
+            <p>1. Öffne auf deinem PC die Datei <strong>start.bat</strong> im Ordner <code>C:\\Users\\HydroFX\\Downloads\\Software\\SmartWatt</code>.</p>
+            <p>2. Öffne im Browser <strong>http://localhost:8000</strong>.</p>
+            <p>3. Trage deinen Benutzer-Code ein – dort wird der echte Tuya-Token generiert und deine Steckdosen sofort importiert!</p>
+          </div>
+          <p class="text-xs text-neutral-400">
+            Auf dieser Online-Seite kannst du unten sofort die <strong>1-Klick Schnell-Vorlagen</strong> nutzen oder Geräte manuell anlegen.
+          </p>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
     }
     return;
   }
@@ -1037,7 +971,7 @@ async function requestTuyaQRCode() {
       if (resultBox) {
         resultBox.classList.remove('hidden');
         resultBox.className = 'text-xs p-3 rounded-xl border bg-rose-950/40 text-rose-300 border-rose-800 font-mono';
-        resultBox.textContent = `✕ ${data.message || 'Fehler beim Erzeugen des QR-Codes. Bitte Benutzer-Code prüfen.'}`;
+        resultBox.textContent = `✕ ${data.message || 'Fehler beim Erzeugen des QR-Codes. Bitte prüfe Groß-/Kleinschreibung deines Benutzer-Codes!'}`;
       }
       return;
     }
@@ -1047,7 +981,7 @@ async function requestTuyaQRCode() {
       displayBox.classList.remove('hidden');
       if (qrStatusText) {
         qrStatusText.innerHTML = `
-          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 live-pulse"></span>
           <span>Warten auf Scan in deiner Smart Life App...</span>
         `;
       }
@@ -1129,7 +1063,7 @@ function addPresetDevice(name, category, power, icon) {
   }
 
   updateAll(true);
-  alert(`✓ "${name}" (${power}W) wurde erfolgreich hinzugefügt!`);
+  alert(`✓ "${name}" (${power}W) hinzugefügt!`);
 }
 
 // JSON EXPORT & IMPORT
@@ -1199,119 +1133,15 @@ function handleFileImport(event) {
   reader.readAsText(file);
 }
 
-// TEST TUYA CLOUD CONNECTION
-async function testTuyaConnection() {
-  const tuyaId = document.getElementById('setting-tuya-id').value.trim();
-  const tuyaSecret = document.getElementById('setting-tuya-secret').value.trim();
-  const tuyaEndpoint = document.getElementById('setting-tuya-endpoint').value;
-  const tuyaUid = document.getElementById('setting-tuya-uid').value.trim();
-
-  const resBox = document.getElementById('tuya-test-result');
-  resBox.classList.remove('hidden');
-  resBox.className = 'text-xs p-3 rounded-xl border bg-slate-900 text-slate-300 font-mono';
-  resBox.textContent = 'Verbindung zu Tuya IoT wird geprüft...';
-
-  if (!tuyaId || !tuyaSecret) {
-    resBox.className = 'text-xs p-3 rounded-xl border bg-rose-950/40 text-rose-300 border-rose-800 font-mono';
-    resBox.textContent = '✕ Bitte Access ID (Client ID) und Access Secret eingeben.';
-    return;
-  }
-
-  if (isStandaloneMode) {
-    currentSettings.tuya_access_id = tuyaId;
-    currentSettings.tuya_access_secret = tuyaSecret;
-    currentSettings.tuya_endpoint = tuyaEndpoint;
-    currentSettings.tuya_uid = tuyaUid;
-    localStorage.setItem('smartwatt_settings_v4', JSON.stringify(currentSettings));
-
-    resBox.className = 'text-xs p-3 rounded-xl border bg-emerald-950/40 text-emerald-300 border-emerald-800 font-mono';
-    resBox.textContent = '✓ Tuya Zugangsdaten erfolgreich gespeichert! Starte den lokalen Server (start.bat), um Live-Daten direkt aus der Tuya Cloud abzurufen.';
-    return;
-  }
-
-  try {
-    const res = await fetch('/api/tuya/test', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        access_id: tuyaId,
-        access_secret: tuyaSecret,
-        endpoint: tuyaEndpoint,
-        uid: tuyaUid
-      })
-    });
-    const data = await res.json();
-    if (res.ok && data.status === 'success') {
-      resBox.className = 'text-xs p-3 rounded-xl border bg-emerald-950/40 text-emerald-300 border-emerald-800 font-mono';
-      resBox.textContent = `✓ ${data.message}`;
-    } else {
-      resBox.className = 'text-xs p-3 rounded-xl border bg-rose-950/40 text-rose-300 border-rose-800 font-mono';
-      resBox.textContent = `✕ ${data.message || 'Verbindung fehlgeschlagen. Bitte Schlüssel prüfen.'}`;
-    }
-  } catch (err) {
-    resBox.className = 'text-xs p-3 rounded-xl border bg-rose-950/40 text-rose-300 border-rose-800 font-mono';
-    resBox.textContent = `✕ Fehler: ${err}`;
-  }
-}
-
-// SYNC / IMPORT TUYA SMART LIFE DEVICES
-async function syncTuyaDevices() {
-  await saveSettings();
-  const resBox = document.getElementById('tuya-test-result');
-  resBox.classList.remove('hidden');
-  resBox.className = 'text-xs p-3 rounded-xl border bg-slate-900 text-slate-300 font-mono';
-  resBox.textContent = 'Importiere Geräte aus Smart Life...';
-
-  if (isStandaloneMode) {
-    resBox.className = 'text-xs p-3 rounded-xl border bg-emerald-950/40 text-emerald-300 border-emerald-800 font-mono';
-    resBox.textContent = '✓ Tuya Cloud Zugangsdaten gespeichert! Für den direkten Live-Sync mit echten Steckdosen starte start.bat auf deinem PC (oder trage Geräte manuell ein).';
-    return;
-  }
-
-  try {
-    const res = await fetch('/api/tuya/sync', { method: 'POST' });
-    const data = await res.json();
-    if (res.ok) {
-      resBox.className = 'text-xs p-3 rounded-xl border bg-emerald-950/40 text-emerald-300 border-emerald-800 font-mono';
-      resBox.textContent = `✓ ${data.imported} neue Steckdose(n) erfolgreich aus Smart Life importiert!`;
-      await updateAll(true);
-    } else {
-      resBox.className = 'text-xs p-3 rounded-xl border bg-rose-950/40 text-rose-300 border-rose-800 font-mono';
-      resBox.textContent = `✕ Import-Fehler: ${data.detail || 'Unbekannter Fehler'}`;
-    }
-  } catch (err) {
-    resBox.className = 'text-xs p-3 rounded-xl border bg-rose-950/40 text-rose-300 border-rose-800 font-mono';
-    resBox.textContent = `✕ Fehler: ${err}`;
-  }
-}
-
-async function toggleSimulationMode() {
-  if (isStandaloneMode) {
-    isStandaloneMode = false;
-    await checkBackendAvailability();
-    updateModeBadge(isStandaloneMode);
-    return;
-  }
-
-  try {
-    const res = await fetch('/api/tuya/toggle-mode', { method: 'POST' });
-    const data = await res.json();
-    updateModeBadge(data.simulation_mode);
-    await updateAll(true);
-  } catch (err) {
-    console.error('Toggle mode error:', err);
-  }
-}
-
 // FLOATING DOCK NAVIGATION
 function navigateTo(section) {
   ['dosen', 'analysen', 'tarif', 'tuya'].forEach(s => {
     const btn = document.getElementById(`dock-btn-${s}`);
     if (!btn) return;
     if (s === section) {
-      btn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-400/35 transition cursor-pointer';
+      btn.className = 'dock-item dock-item-active';
     } else {
-      btn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer';
+      btn.className = 'dock-item';
     }
   });
 
@@ -1327,7 +1157,7 @@ function navigateTo(section) {
   }
 }
 
-// Chart Initializations & Tabs
+// CHARTS INITIALIZATION & TABS
 function switchChartTab(tab) {
   activeChartTab = tab;
   ['power', 'distribution', 'weekly'].forEach(t => {
@@ -1335,11 +1165,11 @@ function switchChartTab(tab) {
     const view = document.getElementById(`chart-view-${t}`);
     if (!btn || !view) return;
     if (t === tab) {
-      btn.className = 'flex-1 sm:flex-none px-3.5 py-1.5 rounded-full transition bg-emerald-500 text-slate-950 font-bold shadow-md cursor-pointer';
+      btn.className = 'segmented-btn segmented-btn-active';
       view.classList.remove('hidden');
       view.style.display = (t === 'distribution') ? 'flex' : 'block';
     } else {
-      btn.className = 'flex-1 sm:flex-none px-3.5 py-1.5 rounded-full transition text-slate-400 hover:text-white cursor-pointer';
+      btn.className = 'segmented-btn';
       view.classList.add('hidden');
       view.style.display = 'none';
     }
@@ -1353,7 +1183,7 @@ function switchChartTab(tab) {
 }
 
 async function initCharts() {
-  Chart.defaults.color = '#94a3b8';
+  Chart.defaults.color = '#8E8E93';
   Chart.defaults.font.family = "'Plus Jakarta Sans', system-ui, sans-serif";
   updatePowerChart();
 }
@@ -1365,7 +1195,7 @@ function updatePowerChart() {
   if (powerChartInstance) powerChartInstance.destroy();
 
   const labels = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', 'Jetzt'];
-  const colors = ['#10b981', '#06b6d4', '#f59e0b', '#ec4899', '#8b5cf6'];
+  const colors = ['#30D158', '#0A84FF', '#FF9F0A', '#BF5AF2', '#64D2FF'];
 
   const datasets = currentDevices.map((d, i) => {
     const p = d.is_on ? (d.power_w || 0) : 0;
@@ -1373,11 +1203,11 @@ function updatePowerChart() {
       label: d.name,
       data: [p * 0.1, p * 0.15, p * 0.4, p * 0.7, p * 0.85, p * 0.6, p * 0.95, p * 1.05, p],
       borderColor: colors[i % colors.length],
-      backgroundColor: colors[i % colors.length] + '18',
+      backgroundColor: colors[i % colors.length] + '15',
       fill: true,
       tension: 0.4,
-      borderWidth: 2.5,
-      pointRadius: 2.5,
+      borderWidth: 2,
+      pointRadius: 2,
       pointBackgroundColor: colors[i % colors.length]
     };
   });
@@ -1388,7 +1218,7 @@ function updatePowerChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { weight: 600 } } } },
+      plugins: { legend: { position: 'top', labels: { boxWidth: 8, font: { weight: 600 } } } },
       scales: {
         x: { grid: { color: 'rgba(255,255,255,0.04)' } },
         y: { grid: { color: 'rgba(255,255,255,0.04)' }, title: { display: true, text: 'Watt', font: { weight: 600 } } }
@@ -1406,8 +1236,8 @@ function updateDistributionChart(rebuild = true) {
   const dataValues = currentDevices.map(d => d.is_on ? (d.power_w || 0) : 0);
   const totalP = dataValues.reduce((a, b) => a + b, 0);
   const chartValues = totalP > 0 ? dataValues : currentDevices.map(() => 1);
-  const colors = ['#10b981', '#06b6d4', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6'];
-  const chartColors = totalP > 0 ? colors.slice(0, labels.length) : currentDevices.map(() => '#334155');
+  const colors = ['#30D158', '#0A84FF', '#FF9F0A', '#BF5AF2', '#64D2FF'];
+  const chartColors = totalP > 0 ? colors.slice(0, labels.length) : currentDevices.map(() => '#2C2C2E');
 
   if (rebuild || !distributionChartInstance) {
     if (distributionChartInstance) distributionChartInstance.destroy();
@@ -1419,8 +1249,8 @@ function updateDistributionChart(rebuild = true) {
         datasets: [{
           data: chartValues,
           backgroundColor: chartColors,
-          borderWidth: 3,
-          borderColor: '#060911'
+          borderWidth: 2,
+          borderColor: '#000000'
         }]
       },
       options: {
@@ -1440,14 +1270,14 @@ function updateDistributionChart(rebuild = true) {
   const legendEl = document.getElementById('distribution-legend');
   if (legendEl) {
     legendEl.innerHTML = currentDevices.map((d, i) => `
-      <div class="flex items-center justify-between p-2.5 rounded-2xl liquid-glass">
+      <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.04]">
         <div class="flex items-center gap-2.5 min-w-0">
-          <span class="w-3 h-3 rounded-full shadow-sm shrink-0" style="background-color: ${colors[i % colors.length]}"></span>
-          <span class="text-slate-200 font-semibold truncate text-xs">${d.name}</span>
+          <span class="w-2.5 h-2.5 rounded-full shadow-sm shrink-0" style="background-color: ${colors[i % colors.length]}"></span>
+          <span class="text-neutral-200 font-medium truncate text-xs">${d.name}</span>
         </div>
         <div class="text-right font-mono shrink-0">
           <span class="text-white font-bold text-xs">${(d.energy_today_kwh || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kWh</span>
-          <span class="text-slate-400 text-[10px] block">~${((d.energy_today_kwh || 0) * parseFloat(currentSettings.kwh_price || '0.34')).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+          <span class="text-neutral-500 text-[10px] block">~${((d.energy_today_kwh || 0) * parseFloat(currentSettings.kwh_price || '0.34')).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
         </div>
       </div>
     `).join('');
@@ -1470,8 +1300,8 @@ function updateWeeklyChart() {
       datasets: [{
         label: 'Stromkosten (€)',
         data: costs,
-        backgroundColor: '#10b981',
-        borderRadius: 8
+        backgroundColor: '#30D158',
+        borderRadius: 6
       }]
     },
     options: {

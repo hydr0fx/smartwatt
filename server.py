@@ -228,7 +228,7 @@ def api_get_devices():
         co2_today_g = energy_today * co2_factor
 
         is_standby = is_on and (0.5 <= power <= standby_th)
-        standby_annual_eur = ((power / 1000.0) * 24.0 * 365.0 * kwhPrice) if is_standby else 0.0
+        standby_annual_eur = ((power / 1000.0) * 24.0 * 365.0 * kwh_price) if is_standby else 0.0
         is_overloaded = power >= overload_th
 
         time_left_sec = 0
