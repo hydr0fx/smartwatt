@@ -1,6 +1,7 @@
-// SmartWatt - Unified High-Performance Frontend & Reactive In-Browser Engine
+// SmartWatt - Liquid Glass Apple & Smart Life Redesign Engine
 let isStandaloneMode = false;
 let currentDevices = [];
+let currentRoomFilter = 'all';
 let currentSettings = {
   kwh_price: "0.34",
   standby_threshold_w: "12.0",
@@ -22,13 +23,15 @@ let pollingTimer = null;
 let tickCount = 0;
 let isQuickPriceOpen = false;
 
-// Default device profiles with typical active power
+// Default device profiles with room assignments
 const defaultStandaloneDevices = [
   {
     id: "demo-gaming-pc",
     name: "Gaming PC & Triple-Monitor",
     icon: "monitor",
     category: "entertainment",
+    room: "entertainment",
+    room_name: "Gaming & Büro",
     is_on: 1,
     power_w: 408.0,
     voltage_v: 231.4,
@@ -45,6 +48,8 @@ const defaultStandaloneDevices = [
     name: "Kühlschrank (Küche)",
     icon: "refrigerator",
     category: "kitchen",
+    room: "kitchen",
+    room_name: "Küche",
     is_on: 1,
     power_w: 78.5,
     voltage_v: 230.8,
@@ -61,6 +66,8 @@ const defaultStandaloneDevices = [
     name: "Waschmaschine (Bad)",
     icon: "washing-machine",
     category: "utility",
+    room: "utility",
+    room_name: "Bad / Haustechnik",
     is_on: 1,
     power_w: 1850.0,
     voltage_v: 229.6,
@@ -77,8 +84,10 @@ const defaultStandaloneDevices = [
     name: "Wohnzimmer TV & Soundbar",
     icon: "tv",
     category: "entertainment",
+    room: "entertainment",
+    room_name: "Wohnzimmer",
     is_on: 1,
-    power_w: 6.8, // In Standby to highlight vampire detector
+    power_w: 6.8, // Standby demonstration
     voltage_v: 232.0,
     current_ma: 29.0,
     energy_today_kwh: 0.32,
@@ -125,9 +134,9 @@ async function checkBackendAvailability() {
   } catch (e) {}
   
   isStandaloneMode = true;
-  console.log("Running in 24/7 Autonomous Cloud Engine");
+  console.log("Running in 24/7 Autonomous Liquid Glass Cloud Engine");
 
-  const savedDevs = localStorage.getItem('smartwatt_devices_v2');
+  const savedDevs = localStorage.getItem('smartwatt_devices_v3');
   if (savedDevs) {
     try { currentDevices = JSON.parse(savedDevs); } catch (e) { currentDevices = defaultStandaloneDevices; }
   } else {
@@ -182,7 +191,7 @@ function runStandaloneTick() {
 
       d._saved_power_w = d.power_w;
       d.current_ma = (d.power_w / d.voltage_v) * 1000.0;
-      if (d.power_w > d.peak_power_w) d.peak_power_w = d.power_w;
+      if (d.power_w > (d.peak_power_w || 0)) d.peak_power_w = d.power_w;
 
       // Real energy accumulation: P * (t / 3600)
       const addedKwh = (d.power_w / 1000.0) * (3.0 / 3600.0);
@@ -191,7 +200,7 @@ function runStandaloneTick() {
     }
   });
 
-  localStorage.setItem('smartwatt_devices_v2', JSON.stringify(currentDevices));
+  localStorage.setItem('smartwatt_devices_v3', JSON.stringify(currentDevices));
 }
 
 // Compute mathematically exact enriched stats
@@ -205,8 +214,8 @@ function enrichDevice(d) {
   // Burn Rates
   const burnRateH = (power / 1000.0) * kwhPrice;
   const costDayRate = burnRateH * 24.0;
-  const costMonthRate = costDayRate * 30.0;  // Standard 30 days
-  const costYearRate = costDayRate * 365.0;  // Standard 365 days
+  const costMonthRate = costDayRate * 30.0;
+  const costYearRate = costDayRate * 365.0;
 
   // Accumulated Costs
   const costToday = (d.energy_today_kwh || 0.0) * kwhPrice;
@@ -230,6 +239,30 @@ function enrichDevice(d) {
     standby_annual_eur: standbyAnnual,
     is_overloaded: isOverloaded
   };
+}
+
+// Room filter toggle (Smart Life style)
+function filterRoom(room) {
+  currentRoomFilter = room;
+  
+  // Highlight tab
+  ['all', 'entertainment', 'kitchen', 'utility'].forEach(r => {
+    const btn = document.getElementById(`room-tab-${r}`);
+    if (!btn) return;
+    if (r === room) {
+      btn.className = 'room-tab px-4 py-2 rounded-full text-xs font-bold transition-all bg-emerald-500/25 text-emerald-300 border border-emerald-400/40 shadow-sm shrink-0';
+    } else {
+      btn.className = 'room-tab px-4 py-2 rounded-full text-xs font-semibold transition-all liquid-glass text-slate-400 hover:text-white shrink-0';
+    }
+  });
+
+  const labelEl = document.getElementById('device-filter-label');
+  if (labelEl) {
+    if (room === 'all') labelEl.textContent = `Alle ${currentDevices.length} Dosen angezeigt`;
+    else labelEl.textContent = `Gefiltert nach Raum`;
+  }
+
+  updateAll(true);
 }
 
 // Master Update Loop
@@ -276,35 +309,53 @@ async function updateAll(fullRebuild = false) {
     };
   }
 
-  // Instant update of Top KPI Cards
+  // Update Top Hero Display
   document.getElementById('kpi-total-power').textContent = Math.round(summary.total_power_w).toLocaleString('de-DE');
   document.getElementById('kpi-active-count').textContent = summary.active_devices_count;
-  document.getElementById('kpi-total-count').textContent = summary.device_count;
-  document.getElementById('kpi-active-devices-detail').textContent = `${summary.active_devices_count} von ${summary.device_count} an`;
+  document.getElementById('kpi-active-devices-detail').textContent = `${summary.active_devices_count} von ${summary.device_count} Steckdosen aktiv`;
 
   document.getElementById('kpi-burn-rate-h').textContent = summary.total_burn_rate_eur_h.toFixed(3).replace('.', ',');
-  document.getElementById('kpi-cost-day').textContent = `${summary.total_cost_day_rate_eur.toFixed(2).replace('.', ',')} €`;
-  document.getElementById('kpi-cost-month').textContent = `${summary.total_cost_month_rate_eur.toFixed(2).replace('.', ',')} €`;
+  document.getElementById('kpi-cost-day').textContent = summary.total_cost_day_rate_eur.toFixed(2).replace('.', ',');
+  document.getElementById('kpi-cost-month').textContent = `Monat: ${summary.total_cost_month_rate_eur.toFixed(2).replace('.', ',')} €`;
 
   document.getElementById('kpi-cost-today').textContent = summary.total_cost_today_eur.toFixed(2).replace('.', ',');
   document.getElementById('kpi-kwh-today').textContent = `${summary.total_energy_today_kwh.toFixed(2).replace('.', ',')} kWh`;
   document.getElementById('kpi-co2-today').textContent = `~${summary.total_co2_today_kg.toFixed(2).replace('.', ',')} kg CO₂`;
 
-  document.getElementById('kpi-vampire-count').textContent = summary.standby_vampire_count;
-  document.getElementById('kpi-vampire-savings').textContent = `~${summary.standby_potential_annual_eur.toFixed(2).replace('.', ',')} € / Jahr`;
-
-  // Pulse dot color (green when on, slate when all off)
-  const dot = document.getElementById('kpi-live-dot');
-  if (dot) {
-    if (summary.total_power_w > 0) {
-      dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 pulse-dot';
+  // Hero Standby Alert Bar
+  const vampireHeroBar = document.getElementById('hero-vampire-alert');
+  if (vampireHeroBar) {
+    if (summary.standby_vampire_count > 0) {
+      vampireHeroBar.classList.remove('hidden');
+      document.getElementById('kpi-vampire-count').textContent = summary.standby_vampire_count;
+      document.getElementById('kpi-vampire-savings').textContent = `~${summary.standby_potential_annual_eur.toFixed(2).replace('.', ',')} € / Jahr verschwendet`;
     } else {
-      dot.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+      vampireHeroBar.classList.add('hidden');
     }
   }
 
+  // Live Pulse Ring Animation state
+  const ring = document.getElementById('kpi-live-ring');
+  const dot = document.getElementById('kpi-live-dot');
+  if (ring && dot) {
+    if (summary.total_power_w > 0) {
+      ring.style.animationPlayState = 'running';
+      ring.className = 'absolute inset-0 rounded-full border-4 border-emerald-400/30 border-t-emerald-400 animate-spin';
+      dot.className = 'inline-block w-2 h-2 rounded-full bg-emerald-400 mb-1 pulse-dot';
+    } else {
+      ring.style.animationPlayState = 'paused';
+      ring.className = 'absolute inset-0 rounded-full border-4 border-slate-700/40 border-t-slate-500';
+      dot.className = 'inline-block w-2 h-2 rounded-full bg-slate-500 mb-1';
+    }
+  }
+
+  // Filter devices by active room
+  const filteredDevices = currentRoomFilter === 'all' 
+    ? devices 
+    : devices.filter(d => (d.room === currentRoomFilter || d.category === currentRoomFilter));
+
   updateModeBadge(isStandaloneMode || summary.simulation_mode);
-  renderDeviceGrid(devices, fullRebuild);
+  renderDeviceGrid(filteredDevices, fullRebuild);
 
   // Keep charts in sync
   if (distributionChartInstance) updateDistributionChart(false);
@@ -315,11 +366,11 @@ function updateModeBadge(isSimulation) {
   const btnToggle = document.getElementById('btn-toggle-sim');
   if (isSimulation) {
     badge.textContent = isStandaloneMode ? '24/7 Cloud Demo' : 'Demo Modus';
-    badge.className = 'text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+    badge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
     if (btnToggle) btnToggle.textContent = 'Zu Live Tuya wechseln';
   } else {
     badge.textContent = 'Tuya Live';
-    badge.className = 'text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20';
+    badge.className = 'text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30';
     if (btnToggle) btnToggle.textContent = 'Zu Demo Modus wechseln';
   }
 }
@@ -339,11 +390,20 @@ function renderDeviceGrid(devices, fullRebuild) {
     const card = document.getElementById(`dev-card-${d.id}`);
     if (!card) return;
 
+    // Card active/inactive liquid glass state
+    if (d.is_on) {
+      card.classList.add('card-active');
+      card.classList.remove('card-inactive');
+    } else {
+      card.classList.add('card-inactive');
+      card.classList.remove('card-active');
+    }
+
     // Power text & glow
     const powerEl = card.querySelector('.dev-power-value');
     if (powerEl) {
       powerEl.textContent = d.is_on ? Math.round(d.power_w).toLocaleString('de-DE') : '0';
-      powerEl.className = `dev-power-value text-2xl font-black font-mono tracking-tight ${!d.is_on ? 'text-slate-500' : (d.power_w < 100 ? 'text-emerald-400 glow-emerald' : (d.power_w < 1000 ? 'text-amber-400 glow-amber' : 'text-orange-400 glow-amber'))}`;
+      powerEl.className = `dev-power-value text-3xl font-black font-mono tracking-tight ${!d.is_on ? 'text-slate-500' : (d.power_w < 100 ? 'text-emerald-400 glow-emerald' : (d.power_w < 1000 ? 'text-amber-400 glow-amber' : 'text-rose-400 glow-rose'))}`;
     }
 
     // Rates
@@ -387,11 +447,11 @@ function renderDeviceGrid(devices, fullRebuild) {
     if (timerBtn) {
       if (d.timer_seconds_left > 0) {
         const mins = Math.ceil(d.timer_seconds_left / 60);
-        timerBtn.textContent = `⏱ Aus in ${mins}m`;
-        timerBtn.className = 'dev-timer-btn text-[11px] px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold';
+        timerBtn.textContent = `⏱ ${mins}m`;
+        timerBtn.className = 'dev-timer-btn flex-1 py-1.5 px-3 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold transition text-xs flex items-center justify-center gap-1';
       } else {
         timerBtn.textContent = 'Timer';
-        timerBtn.className = 'dev-timer-btn text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700 font-semibold transition';
+        timerBtn.className = 'dev-timer-btn flex-1 py-1.5 px-3 rounded-full liquid-glass text-slate-300 hover:text-white font-semibold transition text-xs flex items-center justify-center gap-1';
       }
     }
 
@@ -412,28 +472,37 @@ function createDeviceCardHtml(d) {
   const icon = d.icon || 'plug';
   const isOverloaded = d.is_overloaded;
   const isStandby = d.is_standby;
-  const powerColor = !d.is_on ? 'text-slate-500' : (d.power_w < 100 ? 'text-emerald-400 glow-emerald' : (d.power_w < 1000 ? 'text-amber-400 glow-amber' : 'text-orange-400 glow-amber'));
+  const powerColor = !d.is_on ? 'text-slate-500' : (d.power_w < 100 ? 'text-emerald-400 glow-emerald' : (d.power_w < 1000 ? 'text-amber-400 glow-amber' : 'text-rose-400 glow-rose'));
+  const cardStateClass = d.is_on ? 'card-active' : 'card-inactive';
+
+  // Category specific accent gradient for icon
+  const iconGradients = {
+    'entertainment': 'from-indigo-500/20 to-purple-500/20 text-indigo-400 border-indigo-400/30',
+    'kitchen': 'from-amber-500/20 to-orange-500/20 text-amber-400 border-amber-400/30',
+    'utility': 'from-cyan-500/20 to-blue-500/20 text-cyan-400 border-cyan-400/30'
+  };
+  const iconStyle = iconGradients[d.category] || 'from-emerald-500/20 to-teal-500/20 text-emerald-400 border-emerald-400/30';
 
   return `
-    <div id="dev-card-${d.id}" class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between border ${isOverloaded ? 'border-rose-500 ring-2 ring-rose-500/50' : 'border-slate-800'} relative">
+    <div id="dev-card-${d.id}" class="liquid-card p-5 sm:p-6 flex flex-col justify-between ${cardStateClass} relative overflow-hidden">
       <div>
-        <!-- Top Row: Icon, Name & Instant Switch -->
-        <div class="flex justify-between items-start gap-3 mb-3">
-          <div class="flex items-center gap-2.5">
-            <div class="w-10 h-10 rounded-xl bg-slate-800/90 border border-slate-700 flex items-center justify-center text-emerald-400 shrink-0">
-              <i data-lucide="${icon}" class="w-5 h-5"></i>
+        <!-- Top Row: Tactile Icon, Name & Apple Switch -->
+        <div class="flex justify-between items-start gap-3 mb-4">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br ${iconStyle} border flex items-center justify-center shadow-lg shrink-0">
+              <i data-lucide="${icon}" class="w-6 h-6"></i>
             </div>
             <div>
-              <h3 class="font-bold text-sm text-white tracking-tight leading-tight">${d.name}</h3>
+              <h3 class="font-bold text-sm text-white tracking-tight leading-snug">${d.name}</h3>
               <div class="flex items-center gap-1.5 mt-1">
-                <span class="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700/60">${d.category || 'Steckdose'}</span>
-                <span class="text-[9px] uppercase px-1 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/50 font-mono">Smart Life</span>
+                <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-white/10 text-slate-300 border border-white/10">${d.room_name || d.category || 'Smart Life'}</span>
+                <span class="text-[9px] uppercase px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 font-mono">Live</span>
               </div>
             </div>
           </div>
 
-          <!-- Fast Switch -->
-          <label class="switch shrink-0" title="Klicken für Sofort-Schaltung">
+          <!-- Apple Switch -->
+          <label class="switch shrink-0" title="Sofort umschalten">
             <input type="checkbox" class="dev-switch-input" ${d.is_on ? 'checked' : ''} onchange="toggleDevice('${d.id}', this.checked)">
             <span class="slider"></span>
           </label>
@@ -441,27 +510,27 @@ function createDeviceCardHtml(d) {
 
         <!-- Overload Alert Banner -->
         ${isOverloaded ? `
-          <div class="mb-3 px-2.5 py-1.5 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-semibold flex items-center gap-1.5 animate-pulse">
+          <div class="mb-3 px-3 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-semibold flex items-center gap-2 animate-pulse">
             <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-400 shrink-0"></i>
             <span>Überlastungswarnung! (>2500 Watt)</span>
           </div>
         ` : ''}
 
         <!-- Standby Vampire Banner -->
-        <div class="dev-vampire-banner mb-3 px-2.5 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-medium flex items-center justify-between gap-1.5 ${isStandby ? '' : 'hidden'}">
+        <div class="dev-vampire-banner mb-3 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-medium flex items-center justify-between gap-1.5 ${isStandby ? '' : 'hidden'}">
           <div class="flex items-center gap-1.5">
             <i data-lucide="battery-charging" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
             <span class="dev-vampire-text text-[11px]">Standby: ${d.power_w.toFixed(1)}W (~${d.standby_annual_eur.toFixed(2).replace('.', ',')} €/J)</span>
           </div>
-          <button onclick="toggleDevice('${d.id}', false)" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/30 hover:bg-amber-500/50 text-white font-bold transition">Ausschalten</button>
+          <button onclick="toggleDevice('${d.id}', false)" class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/30 hover:bg-amber-500/50 text-white font-bold transition">Aus</button>
         </div>
 
         <!-- Live Power Display -->
-        <div class="my-3 py-2 px-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
+        <div class="my-3 p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
           <div class="flex items-baseline justify-between">
             <span class="text-xs text-slate-400 font-medium">Momentan-Last:</span>
             <div class="flex items-baseline gap-1">
-              <span class="dev-power-value text-2xl font-black font-mono tracking-tight ${powerColor}">
+              <span class="dev-power-value text-3xl font-black font-mono tracking-tight ${powerColor}">
                 ${d.is_on ? Math.round(d.power_w).toLocaleString('de-DE') : '0'}
               </span>
               <span class="text-xs font-bold text-slate-400">W</span>
@@ -469,47 +538,47 @@ function createDeviceCardHtml(d) {
           </div>
 
           <!-- Real-Time Cost Breakdown -->
-          <div class="mt-2 pt-2 border-t border-slate-800/80 space-y-1">
+          <div class="mt-2.5 pt-2 border-t border-white/10 space-y-1">
             <div class="flex justify-between items-center text-xs">
               <span class="text-slate-400 font-medium">Kostenrate jetzt:</span>
-              <strong class="dev-burn-rate font-mono text-emerald-400 font-semibold">
+              <strong class="dev-burn-rate font-mono text-emerald-400 font-bold">
                 ${d.is_on ? d.burn_rate_eur_h.toFixed(3).replace('.', ',') + ' €/h' : '0,000 €/h'}
               </strong>
             </div>
 
             <div class="flex justify-between items-center text-[11px] text-slate-400 font-mono">
-              <span class="dev-cost-day">${d.is_on ? d.cost_day_rate_eur.toFixed(2).replace('.', ',') + ' €/Tag' : '0,00 €/Tag'}</span>
+              <span class="dev-cost-day">${d.is_on ? d.cost_day_rate_eur.toFixed(2).replace('.', ',')} €/Tag` : '0,00 €/Tag'}</span>
               <span class="dev-cost-month">${d.is_on ? d.cost_month_rate_eur.toFixed(2).replace('.', ',')} €/Monat` : '0,00 €/Monat'}</span>
             </div>
           </div>
         </div>
 
         <!-- Electrical Telemetry Specs -->
-        <div class="grid grid-cols-3 gap-1 py-1 px-2 rounded-lg bg-slate-950/40 text-[10px] text-slate-400 font-mono border border-slate-800/50">
+        <div class="grid grid-cols-3 gap-1 py-1.5 px-2.5 rounded-xl bg-black/20 text-[10px] text-slate-400 font-mono border border-white/5">
           <div>Volt: <span class="dev-voltage text-slate-200 font-bold">${(d.voltage_v || 230).toFixed(1).replace('.', ',')} V</span></div>
-          <div class="text-center">Strom: <span class="dev-current text-slate-200 font-bold">${d.current_ma > 1000 ? (d.current_ma / 1000).toFixed(2).replace('.', ',') + ' A' : Math.round(d.current_ma || 0) + ' mA'}</span></div>
+          <div class="text-center">Strom: <span class="dev-current text-slate-200 font-bold">${d.current_ma > 1000 ? (d.current_ma / 1000).toFixed(2).replace('.', ',')} A` : Math.round(d.current_ma || 0) + ' mA'}</span></div>
           <div class="text-right">Peak: <span class="dev-peak-power text-slate-200 font-bold">${Math.round(d.peak_power_w || 0)} W</span></div>
         </div>
       </div>
 
-      <!-- Bottom Row: Accumulated Today & Action Buttons -->
-      <div class="mt-3 pt-2.5 border-t border-slate-800/80 space-y-2">
+      <!-- Bottom Row: Accumulated Today & Liquid Glass Buttons -->
+      <div class="mt-4 pt-3 border-t border-white/10 space-y-2.5">
         <div class="flex items-center justify-between text-xs">
-          <span class="text-[10px] text-slate-400 uppercase font-semibold">Heute bisher:</span>
+          <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Heute bisher:</span>
           <span class="dev-today-stats text-slate-200 font-mono font-bold text-[11px]">
             ${(d.energy_today_kwh || 0).toFixed(2).replace('.', ',')} kWh (~${d.cost_today_eur.toFixed(2).replace('.', ',')} €)
           </span>
         </div>
 
-        <div class="flex items-center justify-between gap-1.5 pt-1">
-          <!-- Rechner Button -->
-          <button onclick="openCalcModal('${d.id}')" class="flex-1 py-1 px-2 rounded-lg bg-emerald-600/15 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold transition flex items-center justify-center gap-1 shadow-sm">
+        <div class="flex items-center justify-between gap-2 pt-0.5">
+          <!-- Rechner Button (Liquid Pill) -->
+          <button onclick="openCalcModal('${d.id}')" class="flex-1 py-1.5 px-3 rounded-full bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 border border-emerald-400/30 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
             <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
             <span>Rechner</span>
           </button>
 
-          <!-- Timer Button -->
-          <button onclick="openTimerModal('${d.id}', '${d.name.replace(/'/g, "\\'")}')" class="dev-timer-btn flex-1 py-1 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-semibold transition flex items-center justify-center gap-1">
+          <!-- Timer Button (Liquid Pill) -->
+          <button onclick="openTimerModal('${d.id}', '${d.name.replace(/'/g, "\\'")}')" class="dev-timer-btn flex-1 py-1.5 px-3 rounded-full liquid-glass hover:bg-white/15 text-slate-300 font-semibold transition text-xs flex items-center justify-center gap-1.5">
             <i data-lucide="clock" class="w-3.5 h-3.5"></i>
             <span>${d.timer_seconds_left > 0 ? `⏱ ${Math.ceil(d.timer_seconds_left / 60)}m` : 'Timer'}</span>
           </button>
@@ -524,14 +593,12 @@ async function toggleDevice(deviceId, targetState) {
   const dev = currentDevices.find(d => d.id === deviceId);
   if (!dev) return;
 
-  // 1. Instant local state update
   dev.is_on = targetState ? 1 : 0;
   if (!dev.is_on) {
     dev._saved_power_w = dev.power_w > 0 ? dev.power_w : dev._saved_power_w;
     dev.power_w = 0.0;
     dev.current_ma = 0.0;
   } else {
-    // Restore previous power or sensible default
     dev.power_w = dev._saved_power_w && dev._saved_power_w > 0 ? dev._saved_power_w : (
       dev.id === 'demo-gaming-pc' ? 408.0 : (
       dev.id === 'demo-fridge' ? 78.5 : (
@@ -541,13 +608,11 @@ async function toggleDevice(deviceId, targetState) {
     dev.current_ma = (dev.power_w / dev.voltage_v) * 1000.0;
   }
 
-  // 2. Synchronous UI Update with ZERO LATENCY
   if (isStandaloneMode) {
-    localStorage.setItem('smartwatt_devices_v2', JSON.stringify(currentDevices));
+    localStorage.setItem('smartwatt_devices_v3', JSON.stringify(currentDevices));
   }
   await updateAll(false);
 
-  // 3. Background API call if backend mode
   if (!isStandaloneMode) {
     fetch(`/api/devices/${deviceId}/toggle`, {
       method: 'POST',
@@ -557,7 +622,7 @@ async function toggleDevice(deviceId, targetState) {
   }
 }
 
-// INSTANT BATCH TOGGLE ALL
+// BATCH TOGGLE ALL
 async function toggleAllDevices() {
   const anyOn = currentDevices.some(d => d.is_on);
   const targetState = !anyOn;
@@ -569,7 +634,7 @@ async function toggleAllDevices() {
       d.power_w = 0.0;
       d.current_ma = 0.0;
     } else {
-      d.power_w = d._saved_power_w && dev._saved_power_w > 0 ? dev._saved_power_w : (
+      d.power_w = d._saved_power_w && d._saved_power_w > 0 ? d._saved_power_w : (
         d.id === 'demo-gaming-pc' ? 408.0 : (
         d.id === 'demo-fridge' ? 78.5 : (
         d.id === 'demo-washing' ? 1850.0 : 6.8
@@ -579,7 +644,7 @@ async function toggleAllDevices() {
   });
 
   if (isStandaloneMode) {
-    localStorage.setItem('smartwatt_devices_v2', JSON.stringify(currentDevices));
+    localStorage.setItem('smartwatt_devices_v3', JSON.stringify(currentDevices));
   }
   await updateAll(false);
 
@@ -594,17 +659,24 @@ async function toggleAllDevices() {
   }
 }
 
-// QUICK PRICE BAR (REAL-TIME SLIDER)
+// Turn off standby devices with one tap
+function turnOffStandbyDevices() {
+  const standbyTh = parseFloat(currentSettings.standby_threshold_w || '12.0');
+  currentDevices.forEach(d => {
+    if (d.is_on && d.power_w >= 0.5 && d.power_w <= standbyTh) {
+      toggleDevice(d.id, false);
+    }
+  });
+}
+
+// QUICK PRICE BAR
 function toggleQuickPriceBar() {
   const bar = document.getElementById('quick-price-bar');
-  const arrow = document.getElementById('quick-price-arrow');
   isQuickPriceOpen = !isQuickPriceOpen;
   if (isQuickPriceOpen) {
     bar.classList.remove('hidden');
-    arrow.classList.add('rotate-180');
   } else {
     bar.classList.add('hidden');
-    arrow.classList.remove('rotate-180');
   }
 }
 
@@ -622,7 +694,6 @@ function onQuickPriceChange(newPriceVal) {
     localStorage.setItem('smartwatt_settings', JSON.stringify(currentSettings));
   }
 
-  // Live recalculate EVERYTHING immediately
   updateAll(false);
 }
 
@@ -659,7 +730,6 @@ function recalculateCustomCalc() {
   const kwhPerHour = w / 1000.0;
   const costPerHour = kwhPerHour * price;
 
-  // Intervall-Tabelle
   const intervals = [
     { id: '1h', hours: 1 },
     { id: '2h', hours: 2 },
@@ -681,7 +751,6 @@ function recalculateCustomCalc() {
     if (kwhEl) kwhEl.textContent = kwh.toFixed(2).replace('.', ',') + ' kWh';
   });
 
-  // Custom Slider Usage Calculation
   const customDayCost = costPerHour * hoursDaily;
   const customMonthCost = customDayCost * 30.0;
   const customYearCost = customDayCost * 365.0;
@@ -711,7 +780,7 @@ async function applyTimer(minutes) {
   if (dev) {
     dev.timer_seconds_left = minutes * 60;
     if (isStandaloneMode) {
-      localStorage.setItem('smartwatt_devices_v2', JSON.stringify(currentDevices));
+      localStorage.setItem('smartwatt_devices_v3', JSON.stringify(currentDevices));
     }
     closeTimerModal();
     await updateAll(false);
@@ -753,7 +822,6 @@ async function loadSettings() {
   document.getElementById('quick-price-label').textContent = `${price.toFixed(2).replace('.', ',')} €`;
   document.getElementById('setting-kwh-price').value = price;
   document.getElementById('setting-standby-th').value = currentSettings.standby_threshold_w || '12.0';
-  document.getElementById('setting-overload-th').value = currentSettings.overload_threshold_w || '2500';
   document.getElementById('setting-tuya-id').value = currentSettings.tuya_access_id || '';
   document.getElementById('setting-tuya-secret').value = currentSettings.tuya_access_secret || '';
   document.getElementById('setting-tuya-endpoint').value = currentSettings.tuya_endpoint || 'https://openapi.tuyaeu.com';
@@ -763,7 +831,6 @@ async function loadSettings() {
 async function saveSettings() {
   const kwhPrice = document.getElementById('setting-kwh-price').value;
   const standbyTh = document.getElementById('setting-standby-th').value;
-  const overloadTh = document.getElementById('setting-overload-th').value;
   const tuyaId = document.getElementById('setting-tuya-id').value;
   const tuyaSecret = document.getElementById('setting-tuya-secret').value;
   const tuyaEndpoint = document.getElementById('setting-tuya-endpoint').value;
@@ -771,7 +838,6 @@ async function saveSettings() {
 
   currentSettings.kwh_price = kwhPrice;
   currentSettings.standby_threshold_w = standbyTh;
-  currentSettings.overload_threshold_w = overloadTh;
   currentSettings.tuya_access_id = tuyaId;
   currentSettings.tuya_access_secret = tuyaSecret;
   currentSettings.tuya_endpoint = tuyaEndpoint;
@@ -796,17 +862,17 @@ async function saveSettings() {
   await updateAll(true);
 }
 
-// Chart Initializations & Tabs
+// Chart Initializations
 function switchChartTab(tab) {
   activeChartTab = tab;
   ['power', 'distribution', 'weekly'].forEach(t => {
     const btn = document.getElementById(`tab-btn-${t}`);
     const view = document.getElementById(`chart-view-${t}`);
     if (t === tab) {
-      btn.className = 'px-3 py-1.5 rounded-lg transition bg-emerald-600 text-white shadow-sm';
+      btn.className = 'px-3.5 py-1.5 rounded-full transition bg-emerald-500 text-slate-950 font-bold shadow-md';
       view.classList.remove('hidden');
     } else {
-      btn.className = 'px-3 py-1.5 rounded-lg transition text-slate-400 hover:text-white';
+      btn.className = 'px-3.5 py-1.5 rounded-full transition text-slate-400 hover:text-white';
       view.classList.add('hidden');
     }
   });
@@ -818,7 +884,7 @@ function switchChartTab(tab) {
 
 async function initCharts() {
   Chart.defaults.color = '#94a3b8';
-  Chart.defaults.font.family = "'JetBrains Mono', 'Plus Jakarta Sans', monospace";
+  Chart.defaults.font.family = "'Plus Jakarta Sans', system-ui, sans-serif";
   updatePowerChart();
   updateDistributionChart(true);
   updateWeeklyChart();
@@ -829,7 +895,7 @@ function updatePowerChart() {
   if (powerChartInstance) powerChartInstance.destroy();
 
   const labels = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', 'Jetzt'];
-  const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6'];
+  const colors = ['#10b981', '#06b6d4', '#f59e0b', '#ec4899', '#8b5cf6'];
 
   const datasets = currentDevices.map((d, i) => {
     const p = d.is_on ? d.power_w : 0;
@@ -837,11 +903,12 @@ function updatePowerChart() {
       label: d.name,
       data: [p * 0.1, p * 0.15, p * 0.4, p * 0.7, p * 0.85, p * 0.6, p * 0.95, p * 1.05, p],
       borderColor: colors[i % colors.length],
-      backgroundColor: colors[i % colors.length] + '20',
+      backgroundColor: colors[i % colors.length] + '18',
       fill: true,
-      tension: 0.35,
-      borderWidth: 2,
-      pointRadius: 2
+      tension: 0.4,
+      borderWidth: 2.5,
+      pointRadius: 3,
+      pointBackgroundColor: colors[i % colors.length]
     };
   });
 
@@ -851,10 +918,10 @@ function updatePowerChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'top', labels: { boxWidth: 12 } } },
+      plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { weight: 600 } } } },
       scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.05)' } },
-        y: { grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Watt' } }
+        x: { grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, title: { display: true, text: 'Watt', font: { weight: 600 } } }
       }
     }
   });
@@ -863,7 +930,7 @@ function updatePowerChart() {
 function updateDistributionChart(rebuild = true) {
   const labels = currentDevices.map(d => d.name);
   const dataValues = currentDevices.map(d => d.is_on ? (d.power_w || 0) : 0);
-  const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'];
+  const colors = ['#10b981', '#06b6d4', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6'];
 
   const ctx = document.getElementById('canvas-distribution').getContext('2d');
   if (rebuild || !distributionChartInstance) {
@@ -876,15 +943,15 @@ function updateDistributionChart(rebuild = true) {
         datasets: [{
           data: dataValues,
           backgroundColor: colors.slice(0, labels.length),
-          borderWidth: 2,
-          borderColor: '#0f172a'
+          borderWidth: 3,
+          borderColor: '#060911'
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
-        cutout: '68%'
+        cutout: '72%'
       }
     });
   } else {
@@ -893,13 +960,12 @@ function updateDistributionChart(rebuild = true) {
     distributionChartInstance.update('none');
   }
 
-  // Legend
   const legendEl = document.getElementById('distribution-legend');
   if (legendEl) {
     legendEl.innerHTML = currentDevices.map((d, i) => `
-      <div class="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800">
-        <div class="flex items-center gap-2">
-          <span class="w-3 h-3 rounded-full" style="background-color: ${colors[i % colors.length]}"></span>
+      <div class="flex items-center justify-between p-2.5 rounded-2xl liquid-glass">
+        <div class="flex items-center gap-2.5">
+          <span class="w-3 h-3 rounded-full shadow-sm" style="background-color: ${colors[i % colors.length]}"></span>
           <span class="text-slate-200 font-semibold truncate max-w-[150px]">${d.name}</span>
         </div>
         <div class="text-right font-mono">
@@ -926,7 +992,7 @@ function updateWeeklyChart() {
         label: 'Stromkosten (€)',
         data: costs,
         backgroundColor: '#10b981',
-        borderRadius: 6
+        borderRadius: 8
       }]
     },
     options: {
@@ -935,7 +1001,7 @@ function updateWeeklyChart() {
       plugins: { legend: { display: false } },
       scales: {
         x: { grid: { display: false } },
-        y: { grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'Euro (€)' } }
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, title: { display: true, text: 'Euro (€)', font: { weight: 600 } } }
       }
     }
   });
